@@ -1,0 +1,18 @@
+{
+
+  "user_name": "test",
+  "user_password": "password123",
+  "class": "3",
+  "age": 18,
+  "school": "cqupt",
+  "phone": "12345678901",
+  "agent_level": 1, 
+  "collected_cards": [
+    { "card_id": "" }
+  ],
+  "information": "这是一个用户文档示例",
+  "addresses": [
+    { "address_id": "" }
+  ]
+  
+}
