@@ -3,12 +3,25 @@ package controllers
 import (
 	"context"
 	"log"
+	"miniprogram/config"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+type MongoDBQuery struct {
+	client *mongo.Client
+	db     *mongo.Database
+}
+
+// NewMongoDBQueryPractice 创建MongoDB查询练习实例
+func NewMongoDBQuery(client *mongo.Client) *MongoDBQuery {
+	return &MongoDBQuery{
+		client: client,
+		db:     client.Database("miniprogram_db"),
+	}
+}
 
 // 全局变量，保存MongoDB客户端连接
 var mongoClient *mongo.Client
@@ -19,8 +32,9 @@ func InitMongoDB() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// 连接到本地 MongoDB
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	// 从配置文件获取MongoDB连接字符串
+	cfg := config.GetConfig()
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.MongoDBURL))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -35,6 +49,14 @@ func InitMongoDB() {
 	log.Println("成功连接到MongoDB")
 }
 
+// GetCollection 获取指定名称的集合
+func GetCollection(collectionName string) *mongo.Collection {
+	if mongoClient == nil {
+		log.Fatal("MongoDB客户端未初始化")
+	}
+	return mongoClient.Database("miniprogram_db").Collection(collectionName)
+}
+
 // 关闭MongoDB连接
 func CloseMongoDB() {
 	if mongoClient != nil {
@@ -47,48 +69,4 @@ func CloseMongoDB() {
 		}
 		log.Println("MongoDB连接已关闭")
 	}
-}
-
-// GetCollection 根据表名获取MongoDB集合
-// 参数：collectionName - 集合名称（表名）
-// 返回：对应的MongoDB集合对象
-func GetCollection(collectionName string) *mongo.Collection {
-	if mongoClient == nil {
-		log.Fatal("MongoDB未初始化，请先调用InitMongoDB()")
-	}
-
-	// 返回指定数据库中的指定集合
-	return mongoClient.Database("miniprogram").Collection(collectionName)
-}
-
-// GetUser 根据用户名获取用户信息
-// 参数：username - 用户名
-
-func GetUser(username string) (bson.M, error) {
-	if mongoClient == nil {
-		log.Fatal("MongoDB未初始化，请先调用InitMongoDB()")
-	}
-
-	collection := GetCollection("users")
-	filter := bson.M{"user_name": username}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	var user bson.M
-	err := collection.FindOne(ctx, filter).Decode(&user)
-	return user, err
-}
-
-// 示例用法
-func main() {
-	// 初始化MongoDB连接
-	InitMongoDB()
-	defer CloseMongoDB()
-
-	// 获取指定的集合
-	collection := GetCollection("books")
-
-	// 这里可以使用collection进行操作
-	log.Println("成功连接到集合:", collection.Name())
 }

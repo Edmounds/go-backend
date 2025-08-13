@@ -1,116 +1,133 @@
 package controllers
 
 import (
-	"errors"
-	"miniprogram/utils"
+	"encoding/json"
+	"fmt"
+	"miniprogram/config"
+	"miniprogram/middlewares"
+	"net/http"
+	"net/url"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"github.com/gin-gonic/gin"
 )
 
-// 定义用户模型结构体
-type User struct {
-	UserName     string
-	UserId       string
-	UserPassword string
+// WechatLoginRequest 微信登录请求
+type WechatLoginRequest struct {
+	Code string `json:"code" binding:"required"`
 }
 
-// 定义JWT声明结构体
-type Claims struct {
-	UserName string
-	UserId   string
-	jwt.RegisteredClaims
+type WechatLoginResponse struct {
+	SessionKey string `json:"session_key"`
+	OpenID     string `json:"openid"`
+	UnionID    string `json:"unionid"`
+	ErrCode    int    `json:"errcode"`
+	ErrMsg     string `json:"errmsg"`
 }
 
-// JWT密钥 - 在实际生产环境中应该从环境变量或配置文件中获取
-var jwtKey = []byte("miniprogram_secret_key")
-
-// 生成JWT令牌
-func GenerateToken(user User) (string, error) {
-	// 设置过期时间 - 此处设置为24小时
-	expirationTime := time.Now().Add(24 * time.Hour)
-
-	// 创建JWT声明
-	claims := &Claims{
-		UserName: user.UserName,
-		UserId:   user.UserId,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now()),
-			Issuer:    "miniprogram",
-			Subject:   user.UserName,
-		},
-	}
-
-	// 使用指定的签名方法创建令牌
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	// 签名并获取完整的编码后的字符串令牌
-	tokenString, err := token.SignedString(jwtKey)
-	if utils.HandleError(err, "生成Token失败", false) {
-		return "", err
-	}
-	return tokenString, nil
+// LoginResponse 登录响应
+type LoginResponse struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    struct {
+		Token string      `json:"token"`
+		User  interface{} `json:"user"`
+	} `json:"data"`
 }
 
-// 验证JWT令牌
-func ValidateToken(tokenString string) (*Claims, error) {
-	claims := &Claims{}
-	// 解析JWT令牌
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
-	})
+// WechatAuthHandler 微信认证处理器
+func WechatAuthHandler() gin.HandlerFunc {
+	cfg := config.GetConfig()
 
-	if utils.HandleError(err, "验证Token失败", false) {
-		return nil, err
+	return func(c *gin.Context) {
+		var req WechatLoginRequest
+
+		// 绑定请求参数，错误会被全局错误处理中间件捕获
+		if err := c.ShouldBindJSON(&req); err != nil {
+			panic("请求参数错误: " + err.Error())
+		}
+
+		code := req.Code
+
+		// 构建微信API URL（方法1：使用net/url构建查询参数）
+		baseURL := cfg.WechatAPIURL + "/sns/jscode2session"
+		params := url.Values{}
+		params.Add("appid", cfg.WechatAppID)
+		params.Add("secret", cfg.WechatAppSecret)
+		params.Add("js_code", code)
+		params.Add("grant_type", "authorization_code")
+		apiURL := baseURL + "?" + params.Encode()
+
+		// fmt.Println(apiURL)
+
+		// 调用微信API，错误会被全局错误处理中间件捕获
+		response, err := http.Get(apiURL)
+
+		// fmt.Println(response)
+
+		middlewares.HandleError(err, "调用微信API失败", false)
+		defer response.Body.Close()
+		var responseData WechatLoginResponse
+		err = json.NewDecoder(response.Body).Decode(&responseData)
+		middlewares.HandleError(err, "解析微信API响应失败", false)
+
+		// 检查微信API是否返回错误
+		if responseData.ErrCode != 0 {
+			panic(fmt.Sprintf("微信API错误: %d - %s", responseData.ErrCode, responseData.ErrMsg))
+		}
+
+		// 解析微信API响应
+		sessionKey := responseData.SessionKey
+		openID := responseData.OpenID
+
+		// 检查关键字段是否为空
+		if sessionKey == "" || openID == "" {
+			panic("微信API响应数据不完整: session_key 或 openid 为空")
+		}
+
+		// unionID := responseData.UnionID
+
+		// 根据openid查找用户
+		user, _ := GetUserByOpenID(openID)
+
+		if user == nil {
+			// 如果用户不存在，创建一个只有openid的新用户
+			newUser := &User{
+				OpenID:    openID,
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			}
+
+			err := CreateSimpleUser(newUser)
+			if err != nil {
+				panic("创建用户失败: " + err.Error())
+			}
+
+			user = newUser
+		}
+
+		// 用户已存在，生成JWT token
+		tokenUser := middlewares.User{
+			UserName:     user.UserName,
+			UserId:       user.ID.Hex(),
+			UserPassword: user.UserPassword,
+			OpenID:       user.OpenID,
+		}
+
+		token, err := middlewares.GenerateToken(tokenUser)
+		middlewares.HandleError(err, "生成token失败", false)
+
+		// 返回登录成功响应
+		c.JSON(http.StatusOK, LoginResponse{
+			Code:    200,
+			Message: "登录成功",
+			Data: struct {
+				Token string      `json:"token"`
+				User  interface{} `json:"user"`
+			}{
+				Token: token,
+				User:  user.ToUserProfileResponse(),
+			},
+		})
 	}
-	if !token.Valid {
-		return nil, errors.New("令牌无效")
-	}
-
-	return claims, nil
-}
-
-func AuthMiddleware(tokenString string) (*Claims, error) {
-	claims, err := ValidateToken(tokenString)
-
-	if utils.HandleError(err, "验证Token失败", false) {
-		return nil, err
-	}
-	// 检查令牌是否过期
-	if time.Now().Unix() > claims.ExpiresAt.Unix() {
-		return nil, errors.New("令牌已过期")
-	}
-
-	return claims, nil
-}
-
-// // 刷新JWT令牌
-func RefreshToken(tokenString string) (string, error) {
-	// 验证旧令牌
-	claims, err := ValidateToken(tokenString)
-
-	if utils.HandleError(err, "验证Token失败", false) {
-		return "", err
-	}
-
-	// 获取用户信息
-	user, err := GetUser(claims.UserName)
-	if utils.HandleError(err, "获取用户信息失败", false) {
-		return "", err
-	}
-
-	new_user := User{
-		UserName:     user["user_name"].(string),
-		UserId:       user["_id"].(primitive.ObjectID).Hex(), // 使用 Hex() 方法转换为字符串
-		UserPassword: user["user_password"].(string),
-	}
-	// 生成新令牌
-	newToken, err := GenerateToken(new_user)
-	if utils.HandleError(err, "刷新Token失败", false) {
-		return "", err
-	}
-	return newToken, nil
 }

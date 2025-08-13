@@ -1,62 +1,47 @@
 package main
 
 import (
-	"fmt"
+	"log"
+	"miniprogram/config"
 	"miniprogram/controllers"
-	"miniprogram/utils"
+	"miniprogram/middlewares"
+	"miniprogram/routes"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	// "miniprogram/database"
+	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
-// 处理Token相关操作，简化错误处理逻辑
-func handleTokenOperations(user controllers.User) {
-	// 生成token
-	token, err := controllers.GenerateToken(user)
-	if utils.HandleError(err, "生成Token失败", true) {
-		return
-	}
-	fmt.Println("生成的Token:", token)
-
-	// 验证token
-	tokenClaims, err := controllers.ValidateToken(token)
-	if utils.HandleError(err, "验证Token失败", true) {
-		return
-	}
-	fmt.Println("Token信息:", tokenClaims)
-
-	// 刷新token
-	token, err = controllers.RefreshToken(token)
-	if utils.HandleError(err, "刷新Token失败", true) {
-		return
-	}
-	fmt.Println("刷新后的Token:", token)
-}
-
 func main() {
-	// database.CreateBook()
-	// database.CreateWord()
-	// database.CreateUser()
+	// 加载.env文件
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("Warning: 未找到.env文件，将使用默认配置或系统环境变量")
+	}
+
+	// 获取配置
+	cfg := config.GetConfig()
+
+	// 初始化MongoDB连接
 	controllers.InitMongoDB()
 	defer controllers.CloseMongoDB()
 
-	user, err := controllers.GetUser("cqc")
-	if utils.HandleError(err, "获取用户信息失败", true) {
-		return
+	// 设置middleware中的数据库访问函数
+	middlewares.SetGetCollectionFunc(controllers.GetCollection)
+
+	// 创建Gin路由器
+	r := gin.Default()
+
+	// 添加全局中间件
+	r.Use(middlewares.ErrorHandlerMiddleware())
+	r.Use(middlewares.CORSMiddleware())
+
+	// 设置路由
+	routes.SetupRoutes(r)
+
+	// 启动服务器
+	log.Printf("服务器启动在端口 %s", cfg.ServerPort)
+	log.Printf("基础API地址: %s", cfg.BaseAPIURL)
+	if err := r.Run(":" + cfg.ServerPort); err != nil {
+		log.Fatal("启动服务器失败:", err)
 	}
-
-	fmt.Println("用户信息:", user)
-	fmt.Println("用户年龄:", user["age"])
-
-	user_ := controllers.User{
-		UserName:     user["user_name"].(string),
-		UserId:       user["_id"].(primitive.ObjectID).Hex(), // 使用 Hex() 方法转换为字符串
-		UserPassword: user["user_password"].(string),
-	}
-
-	// 处理Token相关操作
-	handleTokenOperations(user_)
-
-	// 打印一条消息，表示程序已成功运行
-	fmt.Println("程序已成功运行！")
 }

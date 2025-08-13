@@ -1,0 +1,3615 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "微信小程序",
+    "description": "",
+    "version": "1.0.0"
+  },
+  "tags": [
+    {
+      "name": "User"
+    },
+    {
+      "name": "Store"
+    },
+    {
+      "name": "Progress"
+    },
+    {
+      "name": "Referrals"
+    },
+    {
+      "name": "Agent"
+    }
+  ],
+  "paths": {
+    "/sns/jscode2session": {
+      "post": {
+        "summary": "微信登录API",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "appid",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "secret",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "js_code",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "grant_type",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "session_key": {
+                      "type": "string"
+                    },
+                    "unionid": {
+                      "type": "string"
+                    },
+                    "errmsg": {
+                      "type": "string"
+                    },
+                    "openid": {
+                      "type": "string"
+                    },
+                    "errcode": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "session_key",
+                    "unionid",
+                    "errmsg",
+                    "openid",
+                    "errcode"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/auth": {
+      "post": {
+        "summary": "用户登录",
+        "deprecated": false,
+        "description": "用户使用用户名和密码进行登录，成功后返回JWT Token",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "code"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "description": "wechat code",
+                    "example": "john_doe"
+                  }
+                }
+              },
+              "examples": {}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                },
+                "example": {
+                  "code": 200,
+                  "message": "登录成功",
+                  "data": {
+                    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNTA3ZjFmNzdiY2Y4NmNkNzk5NDM5MDExIiwidXNlcl9uYW1lIjoiam9obl9kb2UiLCJleHAiOjE3MDUzMTc2MDB9.abc123def456ghi789",
+                    "user": {
+                      "_id": "507f1f77bcf86cd799439011",
+                      "user_name": "john_doe",
+                      "school": "北京大学",
+                      "age": 20,
+                      "agent_level": 0,
+                      "referral_code": "JOHN123"
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "code": 400,
+                  "message": "缺少必需参数",
+                  "error": "user_name 和 user_password 不能为空"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "认证失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "code": 401,
+                  "message": "认证失败",
+                  "error": "用户名或密码错误"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/users": {
+      "post": {
+        "summary": "填写用户信息",
+        "deprecated": false,
+        "description": "新用户注册账号",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "user_name",
+                  "school",
+                  "phone",
+                  "user_password",
+                  "province",
+                  "city",
+                  "district"
+                ],
+                "properties": {
+                  "user_name": {
+                    "type": "string",
+                    "description": "用户名",
+                    "example": "jane_smith"
+                  },
+                  "user_password": {
+                    "type": "string"
+                  },
+                  "age": {
+                    "type": "integer",
+                    "description": "年龄",
+                    "example": 19
+                  },
+                  "school": {
+                    "type": "string",
+                    "description": "学校",
+                    "example": "清华大学"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "description": "手机号",
+                    "example": "13800138000"
+                  },
+                  "class": {
+                    "type": "string",
+                    "description": "班级",
+                    "example": "计算机科学与技术1班"
+                  },
+                  "referred_by": {
+                    "type": "string",
+                    "description": "推荐码",
+                    "example": "JOHN123"
+                  },
+                  "province": {
+                    "type": "string",
+                    "description": "省份"
+                  },
+                  "city": {
+                    "type": "string",
+                    "description": "城市"
+                  },
+                  "district": {
+                    "type": "string",
+                    "description": "详细地址"
+                  }
+                }
+              },
+              "examples": {}
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "注册成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "description": "响应状态码",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "响应消息",
+                      "example": "操作成功"
+                    }
+                  }
+                },
+                "example": {
+                  "code": 201,
+                  "message": "编写成功"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "description": "错误状态码",
+                      "example": 400
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误消息",
+                      "example": "请求参数错误"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "错误代码",
+                      "example": "VALIDATION_ERROR"
+                    }
+                  }
+                },
+                "example": {
+                  "code": 400,
+                  "message": "请求参数错误",
+                  "error": "手机号格式不正确"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "409": {
+            "description": "用户已存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": 409,
+                  "message": "用户已存在",
+                  "error": "用户名 jane_smith 已被注册"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/users/{user_id}/address": {
+      "post": {
+        "summary": "创建收货地址",
+        "deprecated": false,
+        "description": "为用户创建新的收货地址",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID",
+            "required": true,
+            "example": "507f1f77bcf86cd799439011",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "recipient_name",
+                  "phone",
+                  "province",
+                  "city",
+                  "street"
+                ],
+                "properties": {
+                  "recipient_name": {
+                    "type": "string",
+                    "description": "收件人姓名",
+                    "example": "张三"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "description": "收件人电话",
+                    "example": "13800138001"
+                  },
+                  "province": {
+                    "type": "string",
+                    "description": "省份",
+                    "example": "北京市"
+                  },
+                  "city": {
+                    "type": "string",
+                    "description": "城市",
+                    "example": "北京市"
+                  },
+                  "district": {
+                    "type": "string",
+                    "description": "区县",
+                    "example": "海淀区"
+                  },
+                  "street": {
+                    "type": "string",
+                    "description": "详细地址",
+                    "example": "中关村大街1号"
+                  },
+                  "postal_code": {
+                    "type": "string",
+                    "description": "邮政编码",
+                    "example": "100000"
+                  },
+                  "is_default": {
+                    "type": "boolean",
+                    "description": "是否为默认地址",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "地址创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressResponse"
+                },
+                "example": {
+                  "code": 201,
+                  "message": "地址创建成功",
+                  "data": {
+                    "_id": "507f1f77bcf86cd799439013",
+                    "recipient_name": "张三",
+                    "phone": "13800138001",
+                    "province": "北京市",
+                    "city": "北京市",
+                    "district": "海淀区",
+                    "street": "中关村大街1号",
+                    "postal_code": "100000",
+                    "is_default": true
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": 400,
+                  "message": "请求参数错误",
+                  "error": "收件人姓名和电话不能为空"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": 401,
+                  "message": "未授权",
+                  "error": "请提供有效的访问令牌"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "用户不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": 404,
+                  "message": "用户不存在",
+                  "error": "未找到ID为 507f1f77bcf86cd799439011 的用户"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/{user_id}/address/{address_id}": {
+      "delete": {
+        "summary": "删除收货地址",
+        "deprecated": false,
+        "description": "删除用户的指定收货地址",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID",
+            "required": true,
+            "example": "507f1f77bcf86cd799439011",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "address_id",
+            "in": "path",
+            "description": "地址ID",
+            "required": true,
+            "example": "507f1f77bcf86cd799439013",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "地址删除成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "地址不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/users/{user_id}": {
+      "put": {
+        "summary": "更新用户信息",
+        "deprecated": false,
+        "description": "更新用户的基本信息",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID",
+            "required": true,
+            "example": "507f1f77bcf86cd799439011",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "age": {
+                    "type": "integer",
+                    "description": "年龄",
+                    "example": 21
+                  },
+                  "school": {
+                    "type": "string",
+                    "description": "学校",
+                    "title": "pro",
+                    "example": "北京大学"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "description": "手机号",
+                    "example": "13800138002"
+                  },
+                  "class": {
+                    "type": "string",
+                    "description": "班级",
+                    "example": "计算机科学与技术2班"
+                  },
+                  "province": {
+                    "type": "string",
+                    "description": "省份"
+                  },
+                  "city": {
+                    "type": "string",
+                    "description": "城市"
+                  },
+                  "district": {
+                    "type": "string",
+                    "description": "地区"
+                  }
+                },
+                "required": [
+                  "province",
+                  "city",
+                  "district"
+                ]
+              },
+              "examples": {}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "用户信息更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "用户不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/products": {
+      "get": {
+        "summary": "获取所有商品",
+        "deprecated": false,
+        "description": "获取商城中所有可用的商品列表",
+        "tags": [
+          "Store"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "页码",
+            "required": false,
+            "example": 1,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "每页数量",
+            "required": false,
+            "example": 20,
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取商品列表成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "description": "响应状态码",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "响应消息",
+                      "example": "操作成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "products": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string",
+                                "description": "商品唯一标识"
+                              },
+                              "product_id": {
+                                "type": "string",
+                                "description": "商品编号",
+                                "example": "PROD001"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "创建时间"
+                              },
+                              "updated_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "更新时间"
+                              }
+                            }
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/Pagination"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "500": {
+            "description": "服务器内部错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": 500,
+                  "message": "服务器内部错误",
+                  "error": "数据库连接超时，请稍后重试"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/product/{product_id}": {
+      "get": {
+        "summary": "获取特定商品详情",
+        "deprecated": false,
+        "description": "根据商品ID获取商品的详细信息",
+        "tags": [
+          "Store"
+        ],
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "description": "商品ID",
+            "required": true,
+            "example": "PROD001",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取商品详情成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "商品不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": 404,
+                  "message": "商品不存在",
+                  "error": "未找到ID为 PROD999 的商品"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/users/{user_id}/cart": {
+      "post": {
+        "summary": "添加商品到购物车",
+        "deprecated": false,
+        "description": "将指定商品添加到用户的购物车中",
+        "tags": [
+          "Store"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID",
+            "required": true,
+            "example": "507f1f77bcf86cd799439011",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "product_id",
+                  "quantity"
+                ],
+                "properties": {
+                  "product_id": {
+                    "type": "string",
+                    "description": "商品ID",
+                    "example": "PROD001"
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "商品数量",
+                    "example": 2
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "添加到购物车成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartResponse"
+                },
+                "example": {
+                  "code": 200,
+                  "message": "添加到购物车成功",
+                  "data": {
+                    "_id": "507f1f77bcf86cd799439014",
+                    "user_id": "507f1f77bcf86cd799439011",
+                    "items": [
+                      {
+                        "product_id": "PROD001",
+                        "name": "高级英语词汇书",
+                        "price": 49.9,
+                        "quantity": 2,
+                        "subtotal": 99.8
+                      },
+                      {
+                        "product_id": "PROD002",
+                        "name": "英语语法精讲",
+                        "price": 39.9,
+                        "quantity": 1,
+                        "subtotal": 39.9
+                      }
+                    ],
+                    "total_amount": 139.7,
+                    "created_at": "2024-01-15T10:30:00Z",
+                    "updated_at": "2024-01-15T10:35:00Z"
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": 400,
+                  "message": "请求参数错误",
+                  "error": "商品数量必须大于0且不能超过库存数量"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": 401,
+                  "message": "未授权",
+                  "error": "访问令牌无效或已过期"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "商品不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": 404,
+                  "message": "商品不存在",
+                  "error": "未找到ID为 PROD999 的商品"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/users/{user_id}/orders": {
+      "post": {
+        "summary": "从购物车创建订单",
+        "deprecated": false,
+        "description": "将购物车中的商品创建为订单",
+        "tags": [
+          "Store"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID",
+            "required": true,
+            "example": "507f1f77bcf86cd799439011",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "address_id",
+                  "payment_method"
+                ],
+                "properties": {
+                  "address_id": {
+                    "type": "string",
+                    "description": "收货地址ID",
+                    "example": "507f1f77bcf86cd799439013"
+                  },
+                  "payment_method": {
+                    "type": "string",
+                    "enum": [
+                      "wechat_pay",
+                      "alipay",
+                      "bank_card"
+                    ],
+                    "description": "支付方式",
+                    "example": "wechat_pay"
+                  },
+                  "referral_code": {
+                    "type": "string",
+                    "description": "推荐码（可选）",
+                    "example": "JOHN123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "订单创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                },
+                "example": {
+                  "code": 201,
+                  "message": "订单创建成功",
+                  "data": {
+                    "_id": "ORD20240115001",
+                    "user_id": "507f1f77bcf86cd799439011",
+                    "order_status": "pending_payment",
+                    "items": [
+                      {
+                        "product_id": "PROD001",
+                        "name": "高级英语词汇书",
+                        "price": 49.9,
+                        "quantity": 2,
+                        "subtotal": 99.8
+                      }
+                    ],
+                    "shipping_address": {
+                      "recipient_name": "张三",
+                      "phone": "13800138001",
+                      "address": "北京市海淀区中关村大街1号"
+                    },
+                    "price_breakdown": {
+                      "subtotal": 99.8,
+                      "shipping": 10,
+                      "discount": 5,
+                      "final_total": 104.8
+                    },
+                    "payment_method": "wechat_pay",
+                    "created_at": "2024-01-15T10:40:00Z"
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "2": {
+                    "summary": "购物车为空",
+                    "value": {
+                      "code": 400,
+                      "message": "请求参数错误",
+                      "error": "购物车为空，无法创建订单"
+                    }
+                  },
+                  "3": {
+                    "summary": "地址ID无效",
+                    "value": {
+                      "code": 400,
+                      "message": "请求参数错误",
+                      "error": "收货地址不存在或不属于当前用户"
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": 401,
+                  "message": "未授权",
+                  "error": "访问令牌验证失败"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "get": {
+        "summary": "获取订单历史",
+        "deprecated": false,
+        "description": "获取用户的所有订单历史记录",
+        "tags": [
+          "Store"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID",
+            "required": true,
+            "example": "507f1f77bcf86cd799439011",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "订单状态筛选",
+            "required": false,
+            "example": "paid",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "paid",
+                "shipped",
+                "delivered",
+                "cancelled"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "页码",
+            "required": false,
+            "example": 1,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "每页数量",
+            "required": false,
+            "example": 10,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取订单历史成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderListResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/users/{user_id}/cart/items/{product_id}": {
+      "put": {
+        "summary": "更新购物车商品数量",
+        "deprecated": false,
+        "description": "更新购物车中指定商品的数量",
+        "tags": [
+          "Store"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "product_id",
+            "in": "path",
+            "description": "商品ID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "quantity"
+                ],
+                "properties": {
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "新的商品数量"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新购物车成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "删除购物车商品",
+        "deprecated": false,
+        "description": "从购物车中删除指定商品",
+        "tags": [
+          "Store"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "product_id",
+            "in": "path",
+            "description": "商品ID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除商品成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/users/{user_id}/progress": {
+      "get": {
+        "summary": "获取用户学习进度",
+        "deprecated": false,
+        "description": "获取用户当前的学习进度信息",
+        "tags": [
+          "Progress"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID",
+            "required": true,
+            "example": "507f1f77bcf86cd799439011",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取学习进度成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressResponse"
+                },
+                "example": {
+                  "code": 200,
+                  "message": "获取学习进度成功",
+                  "data": {
+                    "_id": "507f1f77bcf86cd799439015",
+                    "user_id": "507f1f77bcf86cd799439011",
+                    "level": 3,
+                    "experience_points": 1250,
+                    "learned_words": [
+                      "hello",
+                      "world",
+                      "computer",
+                      "science",
+                      "technology"
+                    ],
+                    "current_book": "高级英语词汇书",
+                    "current_unit": 5,
+                    "total_study_time": 3600,
+                    "daily_streak": 7,
+                    "achievements": [
+                      "first_login",
+                      "daily_streak_7",
+                      "words_master_100"
+                    ],
+                    "last_study_date": "2024-01-15T09:30:00Z"
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": 401,
+                  "message": "未授权",
+                  "error": "访问令牌无效或已过期"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "用户不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": 404,
+                  "message": "用户不存在",
+                  "error": "未找到ID为 507f1f77bcf86cd799439999 的用户"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "summary": "更新用户学习进度",
+        "deprecated": false,
+        "description": "更新用户的学习进度信息",
+        "tags": [
+          "Progress"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID",
+            "required": true,
+            "example": "507f1f77bcf86cd799439011",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "current_unit": {
+                    "type": "string",
+                    "description": "当前单元",
+                    "example": "Unit 2"
+                  },
+                  "current_sentence": {
+                    "type": "string",
+                    "description": "当前句子",
+                    "example": "What's your name?"
+                  },
+                  "learned_words": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "新学会的单词列表",
+                    "example": [
+                      "what",
+                      "name"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "学习进度更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/books": {
+      "get": {
+        "summary": "获取书籍列表",
+        "deprecated": false,
+        "description": "获取所有可用的教材书籍",
+        "tags": [
+          "Progress"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "页码",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "每页数量",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取书籍列表成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookListResponse"
+                },
+                "example": {
+                  "code": 200,
+                  "message": "获取书籍列表成功",
+                  "data": {
+                    "books": [
+                      {
+                        "_id": "BOOK001",
+                        "title": "大学英语四级词汇",
+                        "description": "涵盖大学英语四级考试所需的核心词汇，包含详细释义和例句",
+                        "level": "intermediate",
+                        "total_words": 2000,
+                        "units": 20,
+                        "cover_image": "https://example.com/book1_cover.jpg",
+                        "author": "英语教学专家组",
+                        "publisher": "教育出版社",
+                        "publication_date": "2023-01-01"
+                      },
+                      {
+                        "_id": "BOOK002",
+                        "title": "高中英语核心词汇",
+                        "description": "高中阶段必备英语词汇，按主题分类学习",
+                        "level": "beginner",
+                        "total_words": 1500,
+                        "units": 15,
+                        "cover_image": "https://example.com/book2_cover.jpg",
+                        "author": "高中英语教研组",
+                        "publisher": "学习出版社",
+                        "publication_date": "2023-03-01"
+                      }
+                    ],
+                    "pagination": {
+                      "current_page": 1,
+                      "total_pages": 3,
+                      "total_items": 5,
+                      "items_per_page": 20
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/books/{book_id}/words": {
+      "get": {
+        "summary": "获取书籍单词",
+        "deprecated": false,
+        "description": "获取指定书籍的所有单词",
+        "tags": [
+          "Progress"
+        ],
+        "parameters": [
+          {
+            "name": "book_id",
+            "in": "path",
+            "description": "书籍ID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unit_id",
+            "in": "query",
+            "description": "单元ID筛选",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取单词列表成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WordListResponse"
+                },
+                "example": {
+                  "code": 200,
+                  "message": "获取单词列表成功",
+                  "data": {
+                    "words": [
+                      {
+                        "_id": "WORD001",
+                        "word": "computer",
+                        "pronunciation": "/kəmˈpjuːtər/",
+                        "definition": "电子计算机，电脑",
+                        "example_sentences": [
+                          "I use my computer every day for work.",
+                          "The computer is running slowly today."
+                        ],
+                        "difficulty": "basic",
+                        "unit_id": "UNIT001",
+                        "book_id": "BOOK001"
+                      },
+                      {
+                        "_id": "WORD002",
+                        "word": "technology",
+                        "pronunciation": "/tekˈnɒlədʒi/",
+                        "definition": "技术，科技",
+                        "example_sentences": [
+                          "Technology has changed our lives.",
+                          "Modern technology is advancing rapidly."
+                        ],
+                        "difficulty": "intermediate",
+                        "unit_id": "UNIT001",
+                        "book_id": "BOOK001"
+                      }
+                    ],
+                    "total_count": 50,
+                    "unit_info": {
+                      "unit_id": "UNIT001",
+                      "unit_name": "科技与生活",
+                      "total_words": 50
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/users/{user_id}/referral": {
+      "get": {
+        "summary": "获取用户推荐信息",
+        "deprecated": false,
+        "description": "获取用户的推荐码和推荐统计信息",
+        "tags": [
+          "Referrals"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID",
+            "required": true,
+            "example": "507f1f77bcf86cd799439011",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取推荐信息成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralResponse"
+                },
+                "example": {
+                  "code": 200,
+                  "message": "获取推荐信息成功",
+                  "data": {
+                    "_id": "507f1f77bcf86cd799439016",
+                    "user_id": "507f1f77bcf86cd799439011",
+                    "referral_code": "JOHN123",
+                    "total_referrals": 15,
+                    "successful_referrals": 12,
+                    "total_commission": 360.5,
+                    "pending_commission": 45,
+                    "withdrawn_commission": 315.5,
+                    "referral_stats": {
+                      "this_month": 3,
+                      "last_month": 5,
+                      "total_earnings": 360.5
+                    },
+                    "recent_referrals": [
+                      {
+                        "referred_user": "alice_wang",
+                        "referral_date": "2024-01-10T14:30:00Z",
+                        "commission_earned": 25,
+                        "status": "completed"
+                      },
+                      {
+                        "referred_user": "bob_li",
+                        "referral_date": "2024-01-08T09:15:00Z",
+                        "commission_earned": 20,
+                        "status": "pending"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": 401,
+                  "message": "未授权",
+                  "error": "访问令牌无效或已过期"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "用户不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": 404,
+                  "message": "用户不存在",
+                  "error": "未找到ID为 507f1f77bcf86cd799439999 的用户"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/referrals": {
+      "post": {
+        "summary": "跟踪推荐关系",
+        "deprecated": false,
+        "description": "记录用户使用推荐码的关系",
+        "tags": [
+          "Referrals"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "referral_code",
+                  "referred_user_id"
+                ],
+                "properties": {
+                  "referral_code": {
+                    "type": "string",
+                    "description": "推荐码",
+                    "example": "JOHN123"
+                  },
+                  "referred_user_id": {
+                    "type": "string",
+                    "description": "被推荐用户ID",
+                    "example": "507f1f77bcf86cd799439012"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "推荐关系记录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/referrals/validate": {
+      "post": {
+        "summary": "验证推荐码",
+        "deprecated": false,
+        "description": "验证推荐码是否有效，并返回推荐人信息",
+        "tags": [
+          "Referrals"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "referral_code"
+                ],
+                "properties": {
+                  "referral_code": {
+                    "type": "string",
+                    "description": "要验证的推荐码",
+                    "example": "JOHN123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "推荐码验证成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "推荐码有效"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "referral_code": {
+                          "type": "string",
+                          "example": "JOHN123"
+                        },
+                        "referrer_info": {
+                          "type": "object",
+                          "properties": {
+                            "user_id": {
+                              "type": "string"
+                            },
+                            "user_name": {
+                              "type": "string"
+                            },
+                            "school": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "discount_rate": {
+                          "type": "number",
+                          "description": "推荐折扣率",
+                          "example": 0.05
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "推荐码无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/users/{user_id}/referral/commissions": {
+      "get": {
+        "summary": "查看返现记录",
+        "deprecated": false,
+        "description": "获取用户的佣金返现记录",
+        "tags": [
+          "Referrals"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID",
+            "required": true,
+            "example": "507f1f77bcf86cd799439011",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "佣金状态筛选",
+            "required": false,
+            "example": "paid",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "paid",
+                "cancelled"
+              ]
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "description": "佣金类型筛选",
+            "required": false,
+            "example": "referral",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "referral",
+                "agent"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取返现记录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionListResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/agents/{user_id}/users": {
+      "get": {
+        "summary": "列出代理管理的用户",
+        "deprecated": false,
+        "description": "获取代理管理的所有用户列表",
+        "tags": [
+          "Agent"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "代理用户ID",
+            "required": true,
+            "example": "507f1f77bcf86cd799439011",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "school",
+            "in": "query",
+            "description": "学校筛选（校代理）",
+            "required": false,
+            "example": "北京大学",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "description": "地区筛选（省代理）",
+            "required": false,
+            "example": "北京市",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取管理用户列表成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentUserListResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/agents/{user_id}/sales": {
+      "get": {
+        "summary": "列出所有代理销售数据和佣金",
+        "deprecated": false,
+        "description": "获取代理的销售统计数据和佣金信息",
+        "tags": [
+          "Agent"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "代理用户ID",
+            "required": true,
+            "example": "507f1f77bcf86cd799439011",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "description": "开始日期",
+            "required": false,
+            "example": "2024-01-01",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "description": "结束日期",
+            "required": false,
+            "example": "2024-01-31",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取销售数据成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentSalesResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/agents/{user_id}/withdraw": {
+      "post": {
+        "summary": "提取佣金",
+        "deprecated": false,
+        "description": "代理用户申请提取可用佣金",
+        "tags": [
+          "Agent"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "代理用户ID",
+            "required": true,
+            "example": "507f1f77bcf86cd799439011",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "amount",
+                  "withdraw_method"
+                ],
+                "properties": {
+                  "amount": {
+                    "type": "number",
+                    "minimum": 0.01,
+                    "description": "提取金额",
+                    "example": 100
+                  },
+                  "withdraw_method": {
+                    "type": "string",
+                    "enum": [
+                      "wechat",
+                      "alipay",
+                      "bank_transfer"
+                    ],
+                    "description": "提取方式",
+                    "example": "wechat"
+                  },
+                  "account_info": {
+                    "type": "object",
+                    "description": "账户信息",
+                    "properties": {
+                      "account_name": {
+                        "type": "string",
+                        "description": "账户名",
+                        "example": "张三"
+                      },
+                      "account_number": {
+                        "type": "string",
+                        "description": "账户号码",
+                        "example": "13800138000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "提取申请提交成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WithdrawResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AddressResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Address"
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "登录成功"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "token": {
+                "type": "string",
+                "description": "JWT Token",
+                "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              },
+              "user": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        }
+      },
+      "ProductResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Product"
+          }
+        }
+      },
+      "UserResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          },
+          "data": {
+            "$ref": "#/components/schemas/User"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "用户唯一标识",
+            "example": "507f1f77bcf86cd799439011"
+          },
+          "user_name": {
+            "type": "string",
+            "description": "用户名",
+            "example": "john_doe"
+          },
+          "user_password": {
+            "type": "string",
+            "description": "用户密码（敏感信息，通常不返回）"
+          },
+          "class": {
+            "type": "string",
+            "description": "班级",
+            "example": "计算机科学与技术1班"
+          },
+          "age": {
+            "type": "integer",
+            "description": "年龄",
+            "example": 20
+          },
+          "school": {
+            "type": "string",
+            "description": "学校",
+            "example": "北京大学"
+          },
+          "phone": {
+            "type": "string",
+            "description": "手机号",
+            "example": "13800138000"
+          },
+          "agent_level": {
+            "type": "integer",
+            "enum": [
+              0,
+              1,
+              2
+            ],
+            "description": "代理等级 (0: 非代理, 1: 校代理, 2: 省代理)",
+            "example": 0
+          },
+          "referral_code": {
+            "type": "string",
+            "description": "用户的推荐码",
+            "example": "JOHN123"
+          },
+          "referred_by": {
+            "type": "string",
+            "description": "使用的推荐码",
+            "example": "JANE456"
+          },
+          "collected_cards": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "card_id": {
+                  "type": "string",
+                  "description": "卡片ID"
+                }
+              }
+            }
+          },
+          "addresses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "关联的地址ID列表"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/Progress"
+          },
+          "is_agent": {
+            "type": "boolean",
+            "description": "是否为代理",
+            "example": false
+          },
+          "agent_type": {
+            "type": "string",
+            "enum": [
+              "school",
+              "province"
+            ],
+            "description": "代理类型"
+          },
+          "managed_schools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "代理管理的学校（校代理）"
+          },
+          "managed_regions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "代理管理的地区（省代理）"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          }
+        }
+      },
+      "Progress": {
+        "type": "object",
+        "properties": {
+          "current_unit": {
+            "type": "string",
+            "description": "当前单元",
+            "example": "Unit 1"
+          },
+          "current_sentence": {
+            "type": "string",
+            "description": "当前句子",
+            "example": "Hello, how are you?"
+          },
+          "learned_words": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "已学单词列表",
+            "example": [
+              "hello",
+              "how",
+              "are",
+              "you"
+            ]
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "商品唯一标识"
+          },
+          "product_id": {
+            "type": "string",
+            "description": "商品编号",
+            "example": "PROD001"
+          },
+          "name": {
+            "type": "string",
+            "description": "商品名称",
+            "example": "英语学习卡片套装"
+          },
+          "price": {
+            "type": "number",
+            "description": "商品价格",
+            "example": 99.9
+          },
+          "description": {
+            "type": "string",
+            "description": "商品描述",
+            "example": "包含1000个常用英语单词卡片"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          }
+        }
+      },
+      "Address": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "地址唯一标识"
+          },
+          "user_id": {
+            "type": "string",
+            "description": "用户ID"
+          },
+          "recipient_name": {
+            "type": "string",
+            "description": "收件人姓名",
+            "example": "张三"
+          },
+          "phone": {
+            "type": "string",
+            "description": "收件人电话",
+            "example": "13800138001"
+          },
+          "province": {
+            "type": "string",
+            "description": "省份",
+            "example": "北京市"
+          },
+          "city": {
+            "type": "string",
+            "description": "城市",
+            "example": "北京市"
+          },
+          "district": {
+            "type": "string",
+            "description": "区县",
+            "example": "海淀区"
+          },
+          "street": {
+            "type": "string",
+            "description": "详细地址",
+            "example": "中关村大街1号"
+          },
+          "postal_code": {
+            "type": "string",
+            "description": "邮政编码",
+            "example": "100000"
+          },
+          "is_default": {
+            "type": "boolean",
+            "description": "是否为默认地址",
+            "example": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          }
+        }
+      },
+      "Cart": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "购物车唯一标识"
+          },
+          "cart_id": {
+            "type": "string",
+            "description": "购物车编号"
+          },
+          "user_id": {
+            "type": "string",
+            "description": "用户ID"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CartItem"
+            }
+          },
+          "total_price": {
+            "type": "number",
+            "description": "总价格"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          }
+        }
+      },
+      "CartItem": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "description": "商品ID"
+          },
+          "quantity": {
+            "type": "integer",
+            "description": "商品数量"
+          },
+          "price": {
+            "type": "number",
+            "description": "商品单价"
+          }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "订单唯一标识"
+          },
+          "order_id": {
+            "type": "string",
+            "description": "订单编号"
+          },
+          "user_id": {
+            "type": "string",
+            "description": "用户ID"
+          },
+          "address_id": {
+            "type": "string",
+            "description": "收货地址ID"
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItem"
+            }
+          },
+          "subtotal": {
+            "type": "number",
+            "description": "商品小计"
+          },
+          "total_price": {
+            "type": "number",
+            "description": "订单总价"
+          },
+          "discount_applied": {
+            "type": "number",
+            "description": "应用的折扣金额"
+          },
+          "referral_discount": {
+            "type": "number",
+            "description": "推荐折扣金额",
+            "example": 5
+          },
+          "shipping_fee": {
+            "type": "number",
+            "description": "运费",
+            "example": 10
+          },
+          "price_breakdown": {
+            "type": "object",
+            "description": "价格明细",
+            "properties": {
+              "subtotal": {
+                "type": "number",
+                "description": "商品小计"
+              },
+              "discount_details": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "referral",
+                        "promotion",
+                        "coupon",
+                        "agent"
+                      ],
+                      "description": "折扣类型"
+                    },
+                    "amount": {
+                      "type": "number",
+                      "description": "折扣金额"
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "折扣说明"
+                    }
+                  }
+                }
+              },
+              "shipping_fee": {
+                "type": "number",
+                "description": "运费"
+              },
+              "final_total": {
+                "type": "number",
+                "description": "最终总价"
+              }
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "paid",
+              "shipped",
+              "delivered",
+              "cancelled"
+            ],
+            "description": "订单状态"
+          },
+          "payment_method": {
+            "type": "string",
+            "description": "支付方式"
+          },
+          "referral_code": {
+            "type": "string",
+            "description": "使用的推荐码"
+          },
+          "referral_bonus_applied": {
+            "type": "boolean",
+            "description": "是否应用了推荐奖励"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          }
+        }
+      },
+      "OrderItem": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "description": "商品ID"
+          },
+          "quantity": {
+            "type": "integer",
+            "description": "商品数量"
+          },
+          "price": {
+            "type": "number",
+            "description": "商品单价"
+          }
+        }
+      },
+      "Referral": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "推荐码唯一标识"
+          },
+          "referral_code": {
+            "type": "string",
+            "description": "推荐码"
+          },
+          "user_id": {
+            "type": "string",
+            "description": "推荐码所属用户ID"
+          },
+          "used_by": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "使用该推荐码的用户ID列表"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          }
+        }
+      },
+      "Commission": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "佣金唯一标识"
+          },
+          "commission_id": {
+            "type": "string",
+            "description": "佣金编号"
+          },
+          "user_id": {
+            "type": "string",
+            "description": "用户ID"
+          },
+          "amount": {
+            "type": "number",
+            "description": "佣金金额"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "佣金日期"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "paid",
+              "cancelled"
+            ],
+            "description": "佣金状态"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "referral",
+              "agent"
+            ],
+            "description": "佣金类型"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          }
+        }
+      },
+      "Book": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "书籍唯一标识"
+          },
+          "book_name": {
+            "type": "string",
+            "description": "书籍名称",
+            "example": "新概念英语第一册"
+          },
+          "book_version": {
+            "type": "string",
+            "description": "书籍版本",
+            "example": "2024版"
+          },
+          "units": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Unit"
+            },
+            "description": "单元列表"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          }
+        }
+      },
+      "Unit": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "单元ID"
+          },
+          "unit_name": {
+            "type": "string",
+            "description": "单元名称",
+            "example": "Unit 1: Greetings"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          }
+        }
+      },
+      "Word": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "单词唯一标识"
+          },
+          "word_name": {
+            "type": "string",
+            "description": "单词名称",
+            "example": "hello"
+          },
+          "word_meaning": {
+            "type": "string",
+            "description": "单词含义",
+            "example": "你好"
+          },
+          "pronunciation_url": {
+            "type": "string",
+            "description": "发音文件URL",
+            "example": "https://example.com/audio/hello.mp3"
+          },
+          "img_url": {
+            "type": "string",
+            "description": "图片URL",
+            "example": "https://example.com/images/hello.jpg"
+          },
+          "unit_id": {
+            "type": "string",
+            "description": "所属单元ID"
+          },
+          "book_id": {
+            "type": "string",
+            "description": "所属书籍ID"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          }
+        }
+      },
+      "ProductListResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "products": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              },
+              "pagination": {
+                "$ref": "#/components/schemas/Pagination"
+              }
+            }
+          }
+        }
+      },
+      "CartResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Cart"
+          }
+        }
+      },
+      "OrderResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Order"
+          }
+        }
+      },
+      "OrderListResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "orders": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              },
+              "pagination": {
+                "$ref": "#/components/schemas/Pagination"
+              }
+            }
+          }
+        }
+      },
+      "ProgressResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Progress"
+          }
+        }
+      },
+      "ReferralResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          },
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Referral"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "total_referrals": {
+                    "type": "integer",
+                    "description": "总推荐数量"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "CommissionListResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "commissions": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Commission"
+                }
+              },
+              "total_amount": {
+                "type": "number",
+                "description": "总金额"
+              },
+              "pending_amount": {
+                "type": "number",
+                "description": "待处理金额"
+              },
+              "paid_amount": {
+                "type": "number",
+                "description": "已支付金额"
+              }
+            }
+          }
+        }
+      },
+      "AgentUserListResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "users": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/User"
+                }
+              },
+              "total_users": {
+                "type": "integer",
+                "description": "用户总数"
+              },
+              "agent_info": {
+                "type": "object",
+                "properties": {
+                  "agent_level": {
+                    "type": "integer",
+                    "description": "代理等级"
+                  },
+                  "agent_type": {
+                    "type": "string",
+                    "description": "代理类型"
+                  },
+                  "managed_schools": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "管理的学校"
+                  },
+                  "managed_regions": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "管理的地区"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "AgentSalesResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "sales_summary": {
+                "type": "object",
+                "properties": {
+                  "total_sales": {
+                    "type": "number",
+                    "description": "总销售额"
+                  },
+                  "total_orders": {
+                    "type": "integer",
+                    "description": "总订单数"
+                  },
+                  "total_commission": {
+                    "type": "number",
+                    "description": "总佣金"
+                  },
+                  "period": {
+                    "type": "object",
+                    "properties": {
+                      "start_date": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "end_date": {
+                        "type": "string",
+                        "format": "date"
+                      }
+                    }
+                  }
+                }
+              },
+              "sales_by_product": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "product_id": {
+                      "type": "string"
+                    },
+                    "product_name": {
+                      "type": "string"
+                    },
+                    "quantity_sold": {
+                      "type": "integer"
+                    },
+                    "total_revenue": {
+                      "type": "number"
+                    },
+                    "commission": {
+                      "type": "number"
+                    }
+                  }
+                }
+              },
+              "monthly_trend": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "month": {
+                      "type": "string"
+                    },
+                    "sales": {
+                      "type": "number"
+                    },
+                    "orders": {
+                      "type": "integer"
+                    },
+                    "commission": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "WithdrawResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "withdraw_id": {
+                "type": "string",
+                "description": "提取记录ID"
+              },
+              "amount": {
+                "type": "number",
+                "description": "提取金额"
+              },
+              "withdraw_method": {
+                "type": "string",
+                "description": "提取方式"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "processing",
+                  "completed",
+                  "failed"
+                ],
+                "description": "提取状态"
+              },
+              "estimated_arrival": {
+                "type": "string",
+                "format": "date-time",
+                "description": "预计到账时间"
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "创建时间"
+              }
+            }
+          }
+        }
+      },
+      "BookListResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "获取书籍列表成功"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "books": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Book"
+                }
+              },
+              "pagination": {
+                "$ref": "#/components/schemas/Pagination"
+              }
+            }
+          }
+        }
+      },
+      "WordListResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "获取单词列表成功"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "words": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Word"
+                }
+              },
+              "total_count": {
+                "type": "integer",
+                "description": "单词总数"
+              }
+            }
+          }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "当前页码",
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "每页数量",
+            "example": 20
+          },
+          "total": {
+            "type": "integer",
+            "description": "总记录数",
+            "example": 100
+          },
+          "total_pages": {
+            "type": "integer",
+            "description": "总页数",
+            "example": 5
+          }
+        }
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "错误状态码",
+            "example": 400
+          },
+          "message": {
+            "type": "string",
+            "description": "错误消息",
+            "example": "请求参数错误"
+          },
+          "error": {
+            "type": "string",
+            "description": "错误代码",
+            "example": "VALIDATION_ERROR"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "请在请求头中添加 Authorization: Bearer {token}"
+      }
+    }
+  },
+  "servers": [],
+  "security": []
+}
