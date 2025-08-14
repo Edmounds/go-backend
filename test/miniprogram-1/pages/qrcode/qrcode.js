@@ -62,10 +62,12 @@ Page({
   onLoad: function(options) {
     console.log('QRCode页面加载');
     this.checkLoginStatus();
+    this.setSceneToUserReferral();
   },
 
   onShow: function() {
     this.checkLoginStatus();
+    this.setSceneToUserReferral();
   },
 
   // 检查登录状态
@@ -75,6 +77,27 @@ Page({
       isLoggedIn: !!userInfo,
       userInfo: userInfo
     });
+  },
+
+  // 如果已登录且还未填写scene，则自动填入“rc=<用户推荐码>”，并将page指向推荐页
+  setSceneToUserReferral: async function() {
+    try {
+      if (!this.data.isLoggedIn) return;
+      if (this.data.scene && this.data.scene.trim().length > 0) return;
+
+      const userInfo = auth.getUserInfo();
+      if (!userInfo || !userInfo.openID) return;
+
+      const result = await api.getUserReferralInfo(userInfo.openID);
+      if (result && result.code === 200 && result.data && result.data.referral_code) {
+        this.setData({
+          scene: `rc=${result.data.referral_code}`,
+          page: 'pages/referral/referral'
+        });
+      }
+    } catch (e) {
+      console.warn('自动填充scene失败:', e);
+    }
   },
 
   // 登录

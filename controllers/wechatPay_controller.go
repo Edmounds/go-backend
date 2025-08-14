@@ -2,8 +2,11 @@ package controllers
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
+	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,6 +19,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/wechatpay-apiv3/wechatpay-go/core"
+
 	"github.com/wechatpay-apiv3/wechatpay-go/core/option"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/jsapi"
 	"github.com/wechatpay-apiv3/wechatpay-go/utils"
@@ -31,6 +35,11 @@ type CreateWechatPayOrderRequest struct {
 
 // WechatPayClient 微信支付客户端单例
 var wechatPayClient *core.Client
+
+// 微信支付相关全局变量
+var (
+	merchantPrivateKey *rsa.PrivateKey
+)
 
 // InitWechatPayClient 初始化微信支付客户端
 func InitWechatPayClient() error {
@@ -48,6 +57,9 @@ func InitWechatPayClient() error {
 		return fmt.Errorf("load merchant private key error: %v", err)
 	}
 
+	// 保存商户私钥到全局变量
+	merchantPrivateKey = mchPrivateKey
+
 	ctx := context.Background()
 	// 使用商户私钥等初始化 client，并使它具有自动定时获取微信支付平台证书的能力
 	opts := []core.ClientOption{
@@ -59,6 +71,7 @@ func InitWechatPayClient() error {
 	}
 
 	wechatPayClient = client
+
 	log.Println("微信支付客户端初始化成功")
 	return nil
 }
@@ -171,8 +184,8 @@ func CreateWechatPayOrder(order *models.Order, userOpenID string) (*WechatPayOrd
 	nonceStr := generateNonceStr()
 	packageStr := fmt.Sprintf("prepay_id=%s", *resp.PrepayId)
 
-	// 生成签名
-	paySign, err := generatePaySign(cfg.WechatAppID, timeStamp, nonceStr, packageStr, cfg.WechatMchAPIv3Key)
+	// 使用微信支付 v3 标准生成签名
+	paySign, err := generateWechatPayV3Sign(cfg.WechatAppID, timeStamp, nonceStr, packageStr, merchantPrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("生成支付签名失败: %v", err)
 	}
@@ -198,65 +211,41 @@ func WechatPayNotifyHandler() gin.HandlerFunc {
 			return
 		}
 
-		// 基本的回调数据结构
+		// 获取请求头用于日志记录
+		wechatSerial := c.GetHeader("Wechatpay-Serial")
+		wechatTimestamp := c.GetHeader("Wechatpay-Timestamp")
+
+		log.Printf("收到微信支付回调，序列号: %s, 时间戳: %s", wechatSerial, wechatTimestamp)
+		log.Printf("回调内容: %s", string(body))
+
+		// TODO: 这里应该进行签名验证和解密，目前先简化处理
+		// 在生产环境中，必须验证签名确保回调来自微信支付
+
+		// 简单解析回调数据结构
 		var notifyData struct {
 			EventType    string `json:"event_type"`
 			ResourceType string `json:"resource_type"`
 			Resource     struct {
-				Algorithm      string `json:"algorithm"`
-				Ciphertext     string `json:"ciphertext"`
-				AssociatedData string `json:"associated_data"`
-				Nonce          string `json:"nonce"`
-				OriginalType   string `json:"original_type"`
+				Ciphertext string `json:"ciphertext"`
+				Nonce      string `json:"nonce"`
 			} `json:"resource"`
 		}
 
-		// 解析回调数据
 		if err := json.Unmarshal(body, &notifyData); err != nil {
 			log.Printf("解析微信支付回调数据失败: %v", err)
 			c.String(http.StatusBadRequest, "FAIL")
 			return
 		}
 
-		// TODO: 这里应该进行签名验证，为了简化暂时跳过
-		log.Printf("收到微信支付回调: %s", string(body))
-
-		// 解密并处理支付结果（简化版）
-		// 在实际生产中，需要根据微信支付的加密规则进行解密
 		if notifyData.EventType == "TRANSACTION.SUCCESS" {
-			// 从加密数据中提取订单信息（这里需要实际的解密逻辑）
-			log.Printf("支付成功回调，暂时记录日志")
+			log.Printf("收到支付成功回调")
+			// TODO: 解密resource.ciphertext获取具体的交易信息
+			// 目前先记录日志，实际项目中需要解密并更新订单状态
 		}
 
 		// 返回成功响应给微信
 		c.String(http.StatusOK, "SUCCESS")
 	}
-}
-
-// PaymentNotification 支付通知结构体（简化版）
-type PaymentNotification struct {
-	TransactionID string `json:"transaction_id"`
-	OutTradeNo    string `json:"out_trade_no"`
-	TradeState    string `json:"trade_state"`
-	Attach        string `json:"attach"`
-}
-
-// ProcessPaymentNotificationSimple 处理支付通知（简化版）
-func ProcessPaymentNotificationSimple(orderID, transactionID, tradeState string) error {
-	// 验证支付状态
-	if tradeState != "SUCCESS" {
-		log.Printf("支付未成功，订单ID: %s, 状态: %s", orderID, tradeState)
-		return UpdateOrderStatus(orderID, "payment_failed")
-	}
-
-	// 支付成功，处理订单
-	err := ProcessPaymentSuccess(orderID, transactionID)
-	if err != nil {
-		log.Printf("处理支付成功逻辑失败: %v", err)
-		return err
-	}
-
-	return nil
 }
 
 // ProcessPaymentSuccess 处理支付成功
@@ -303,14 +292,26 @@ func generateNonceStr() string {
 	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
 
-// generatePaySign 生成支付签名
-func generatePaySign(appID, timeStamp, nonceStr, packageStr, apiKey string) (string, error) {
-	// 构造签名字符串
+// generateWechatPayV3Sign 生成微信支付 v3 标准签名（RSA-SHA256）
+func generateWechatPayV3Sign(appID, timeStamp, nonceStr, packageStr string, privateKey *rsa.PrivateKey) (string, error) {
+	if privateKey == nil {
+		return "", fmt.Errorf("商户私钥未初始化")
+	}
+
+	// 构造签名字符串（微信支付 v3 标准格式）
 	signStr := fmt.Sprintf("%s\n%s\n%s\n%s\n", appID, timeStamp, nonceStr, packageStr)
 
-	// 使用MD5加密
-	hash := md5.Sum([]byte(signStr + "&key=" + apiKey))
-	return hex.EncodeToString(hash[:]), nil
+	// 计算SHA256哈希
+	hash := sha256.Sum256([]byte(signStr))
+
+	// 使用RSA私钥签名
+	signature, err := rsa.SignPKCS1v15(rand.Reader, privateKey, crypto.SHA256, hash[:])
+	if err != nil {
+		return "", fmt.Errorf("RSA签名失败: %v", err)
+	}
+
+	// 返回base64编码的签名
+	return base64.StdEncoding.EncodeToString(signature), nil
 }
 
 // GetOrderByIDAndUserOpenID 根据订单ID和用户OpenID获取订单

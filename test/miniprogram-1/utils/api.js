@@ -248,6 +248,15 @@ const api = {
       method: 'POST',
       data: qrCodeData
     })
+  },
+
+  // ===== 微信支付相关 =====
+  // 创建微信支付订单
+  createWechatPayOrder(userId, orderData) {
+    return request(`/users/${userId}/orders/pay`, {
+      method: 'POST',
+      data: orderData
+    })
   }
 }
 

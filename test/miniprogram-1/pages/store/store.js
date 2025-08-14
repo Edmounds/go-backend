@@ -355,5 +355,75 @@ Page({
   formatDate(dateString) {
     const date = new Date(dateString)
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  },
+
+  // 支付订单
+  async payOrder(e) {
+    const orderId = e.currentTarget.dataset.orderId
+    const userInfo = auth.getUserInfo()
+    
+    if (!userInfo || !userInfo.openID) {
+      wx.showToast({
+        title: '请先登录',
+        icon: 'none'
+      })
+      return
+    }
+
+    try {
+      wx.showLoading({ title: '创建支付订单...' })
+      
+      // 调用后端创建微信支付订单
+      const result = await api.createWechatPayOrder(userInfo.openID, {
+        order_id: orderId
+      })
+
+      if (result.code === 200 && result.data && result.data.pay_params) {
+        wx.hideLoading()
+        
+        // 调用微信支付
+        const payParams = result.data.pay_params
+        wx.requestPayment({
+          timeStamp: payParams.timeStamp,
+          nonceStr: payParams.nonceStr,
+          package: payParams.package,
+          signType: payParams.signType,
+          paySign: payParams.paySign,
+          success: (res) => {
+            console.log('支付成功:', res)
+            wx.showToast({
+              title: '支付成功',
+              icon: 'success'
+            })
+            // 刷新订单列表
+            this.loadOrders()
+          },
+          fail: (err) => {
+            console.error('支付失败:', err)
+            if (err.errMsg.includes('cancel')) {
+              wx.showToast({
+                title: '支付已取消',
+                icon: 'none'
+              })
+            } else {
+              wx.showToast({
+                title: '支付失败: ' + err.errMsg,
+                icon: 'none'
+              })
+            }
+          }
+        })
+      } else {
+        throw new Error(result.message || '创建支付订单失败')
+      }
+    } catch (error) {
+      console.error('创建支付订单失败:', error)
+      wx.hideLoading()
+      wx.showModal({
+        title: '支付失败',
+        content: error.message || '创建支付订单时出现错误，请重试',
+        showCancel: false
+      })
+    }
   }
 })

@@ -183,6 +183,11 @@
             </text>
           </view>
         </view>
+        <view class="order-actions" wx:if="{{item.status === 'pending_payment' || item.status === 'awaiting_payment'}}">
+          <button class="pay-btn" bindtap="payOrder" data-order-id="{{item._id}}" size="mini">
+            立即支付
+          </button>
+        </view>
       </view>
     </view>
   </view>

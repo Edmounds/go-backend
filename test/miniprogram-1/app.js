@@ -11,7 +11,7 @@ App({
       success: res => {
         console.log(res)
         wx.request({
-          url: 'http://localhost:8080/api/auth', // 或你的服务器地址
+          url: 'https://backend.edmounds.top/api/auth', // 或你的服务器地址
           method: 'POST',
           header: {
             'Content-Type': 'application/json'

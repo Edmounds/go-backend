@@ -1,7 +1,7 @@
 // 配置文件
 const config = {
   // 后端API地址
-  apiBaseUrl: 'http://localhost:8080/api',
+  apiBaseUrl: 'https://backend.edmounds.top/api',
   
   // 微信小程序配置
   appId: 'your_wechat_app_id_here',

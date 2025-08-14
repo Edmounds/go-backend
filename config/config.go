@@ -21,6 +21,7 @@ type Config struct {
 
 	// 数据库配置
 	MongoDBURL string
+	OBSURL     string
 
 	// JWT配置
 	JWTSecret string
@@ -44,7 +45,7 @@ func GetConfig() *Config {
 
 		// 数据库配置
 		MongoDBURL: getEnv("MONGODB_URL", "mongodb://localhost:27017"),
-
+		OBSURL:     getEnv("OBS_URL", ""),
 		// JWT配置
 		JWTSecret: getEnv("JWT_SECRET", "your-secret-key"),
 	}

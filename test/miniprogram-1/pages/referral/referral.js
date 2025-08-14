@@ -13,7 +13,31 @@ Page({
     discountRate: 0
   },
 
-  onLoad() {
+  onLoad(options) {
+    // 解析 scene 参数：支持微信扫码进入时的 scene，及直接以参数形式传递的 referral_code
+    // 约定 scene 形如 "rc=<推荐码>"，或URL查询中的 referral_code
+    try {
+      const sceneParam = options && options.scene ? decodeURIComponent(options.scene) : ''
+      const referralParam = options && options.referral_code ? options.referral_code : ''
+      let incomingReferralCode = ''
+
+      if (referralParam) {
+        incomingReferralCode = referralParam
+      } else if (sceneParam) {
+        // 支持 rc=XXXX、referral_code=XXXX 或仅为纯推荐码
+        const rcMatch = sceneParam.match(/(?:^|&)(?:rc|referral_code)=([^&]+)/)
+        incomingReferralCode = rcMatch ? rcMatch[1] : sceneParam
+      }
+
+      if (incomingReferralCode) {
+        this.setData({ referralCode: incomingReferralCode })
+        // 自动验证
+        this.validateReferralCode()
+      }
+    } catch (e) {
+      console.warn('解析scene失败:', e)
+    }
+
     this.loadUserReferralInfo()
   },
 

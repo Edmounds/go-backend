@@ -7,11 +7,18 @@ import (
 	"strings"
 	"time"
 
+	"miniprogram/config"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
+
+// 专用上下文键类型，避免与外部包产生冲突
+type contextKey string
+
+const contextKeyUser contextKey = "user"
 
 // 定义用户模型结构体 (简化版，用于JWT token)
 type User struct {
@@ -29,7 +36,7 @@ type Claims struct {
 }
 
 // JWT密钥
-var jwtKey = []byte("Chenqichen666")
+var jwtKey = []byte(config.GetConfig().JWTSecret)
 
 // 生成JWT令牌
 func GenerateToken(user User) (string, error) {
@@ -180,7 +187,7 @@ func RefreshToken(tokenString string, getUserFunc func(string) (bson.M, error)) 
 
 // 从上下文中获取用户信息
 func GetUserFromContext(r *http.Request) (*Claims, bool) {
-	claims, ok := r.Context().Value("user").(*Claims)
+	claims, ok := r.Context().Value(contextKeyUser).(*Claims)
 	return claims, ok
 }
 
@@ -196,7 +203,7 @@ func GetUserFromGinContext(c *gin.Context) (*Claims, bool) {
 
 // 将用户信息添加到上下文
 func AddUserToContext(ctx context.Context, claims *Claims) context.Context {
-	return context.WithValue(ctx, "user", claims)
+	return context.WithValue(ctx, contextKeyUser, claims)
 }
 
 // 数据库访问函数类型定义
