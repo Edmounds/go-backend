@@ -1,0 +1,408 @@
+/* pages/agent/agent.wxss */
+.container {
+  padding: 20rpx;
+  background-color: #f8f8f8;
+  min-height: 100vh;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 30rpx;
+}
+
+.title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+/* 标签页导航 */
+.tab-nav {
+  display: flex;
+  background: white;
+  border-radius: 10rpx;
+  margin-bottom: 20rpx;
+  overflow: hidden;
+}
+
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 30rpx 0;
+  font-size: 26rpx;
+  color: #666;
+  background: white;
+  border-bottom: 4rpx solid transparent;
+}
+
+.tab-item.active {
+  color: #007aff;
+  border-bottom-color: #007aff;
+  font-weight: bold;
+}
+
+.section {
+  background: white;
+  border-radius: 10rpx;
+  margin-bottom: 20rpx;
+  padding: 30rpx;
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+  border-left: 4rpx solid #007aff;
+  padding-left: 10rpx;
+}
+
+.loading, .empty {
+  text-align: center;
+  padding: 60rpx 0;
+  color: #666;
+  font-size: 26rpx;
+}
+
+/* 筛选条件 */
+.filter-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.filter-row {
+  display: flex;
+  gap: 15rpx;
+}
+
+.filter-input {
+  flex: 1;
+  border: 1rpx solid #ddd;
+  border-radius: 6rpx;
+  padding: 15rpx;
+  font-size: 26rpx;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 15rpx;
+}
+
+.filter-btn {
+  background: #007aff;
+  color: white;
+}
+
+.filter-btn.clear {
+  background: #999;
+}
+
+/* 用户列表 */
+.users-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.user-item {
+  border: 1rpx solid #e0e0e0;
+  border-radius: 10rpx;
+  padding: 20rpx;
+  background: #fafafa;
+}
+
+.user-info {
+  margin-bottom: 15rpx;
+}
+
+.user-name {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-right: 20rpx;
+}
+
+.user-school, .user-city {
+  font-size: 24rpx;
+  color: #666;
+  margin-right: 15rpx;
+}
+
+.user-meta {
+  display: flex;
+  gap: 20rpx;
+  margin-bottom: 10rpx;
+  font-size: 24rpx;
+}
+
+.user-orders, .user-spent {
+  color: #007aff;
+}
+
+.user-type {
+  background: #ff9500;
+  color: white;
+  padding: 4rpx 10rpx;
+  border-radius: 6rpx;
+  font-size: 22rpx;
+}
+
+.user-id {
+  font-size: 22rpx;
+  color: #999;
+  word-break: break-all;
+}
+
+/* 日期筛选 */
+.date-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.date-item {
+  display: flex;
+  align-items: center;
+  gap: 15rpx;
+}
+
+.date-label {
+  font-size: 26rpx;
+  color: #333;
+  width: 140rpx;
+}
+
+.date-picker {
+  flex: 1;
+  border: 1rpx solid #ddd;
+  border-radius: 6rpx;
+  padding: 15rpx;
+  font-size: 26rpx;
+  color: #333;
+}
+
+/* 销售摘要 */
+.sales-summary {
+  background: #f0f7ff;
+  border-radius: 10rpx;
+  padding: 25rpx;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15rpx;
+}
+
+.summary-label {
+  font-size: 26rpx;
+  color: #666;
+}
+
+.summary-value {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #007aff;
+}
+
+.summary-period {
+  margin-top: 15rpx;
+  font-size: 24rpx;
+  color: #999;
+  text-align: center;
+  border-top: 1rpx solid #e0e0e0;
+  padding-top: 15rpx;
+}
+
+/* 产品销售 */
+.product-sales {
+  display: flex;
+  flex-direction: column;
+  gap: 15rpx;
+}
+
+.product-item {
+  background: #f9f9f9;
+  border-radius: 8rpx;
+  padding: 20rpx;
+}
+
+.product-info {
+  margin-bottom: 10rpx;
+}
+
+.product-name {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #333;
+  margin-right: 15rpx;
+}
+
+.product-id {
+  font-size: 22rpx;
+  color: #999;
+}
+
+.product-stats {
+  display: flex;
+  gap: 20rpx;
+  font-size: 24rpx;
+}
+
+.product-quantity {
+  color: #007aff;
+}
+
+.product-revenue {
+  color: #34c759;
+}
+
+.product-commission {
+  color: #ff9500;
+}
+
+/* 月度趋势 */
+.monthly-trend {
+  display: flex;
+  flex-direction: column;
+  gap: 15rpx;
+}
+
+.trend-item {
+  background: #f9f9f9;
+  border-radius: 8rpx;
+  padding: 20rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 24rpx;
+}
+
+.trend-month {
+  font-weight: bold;
+  color: #333;
+  width: 120rpx;
+}
+
+.trend-sales {
+  color: #34c759;
+}
+
+.trend-orders {
+  color: #007aff;
+}
+
+.trend-commission {
+  color: #ff9500;
+}
+
+/* 提现表单 */
+.withdraw-form {
+  display: flex;
+  flex-direction: column;
+  gap: 25rpx;
+}
+
+.form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+
+.form-label {
+  font-size: 26rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.form-input {
+  border: 1rpx solid #ddd;
+  border-radius: 6rpx;
+  padding: 15rpx;
+  font-size: 26rpx;
+}
+
+.form-picker {
+  border: 1rpx solid #ddd;
+  border-radius: 6rpx;
+  padding: 15rpx;
+  font-size: 26rpx;
+  color: #333;
+}
+
+.submit-btn {
+  background: #34c759;
+  color: white;
+  margin-top: 20rpx;
+  font-size: 28rpx;
+}
+
+/* 提现历史 */
+.withdraw-history {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.history-item {
+  border: 1rpx solid #e0e0e0;
+  border-radius: 10rpx;
+  padding: 20rpx;
+  background: #fafafa;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15rpx;
+}
+
+.history-id {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.history-status {
+  font-size: 24rpx;
+  padding: 6rpx 12rpx;
+  border-radius: 6rpx;
+  color: white;
+}
+
+.history-status.pending {
+  background: #ff9500;
+}
+
+.history-status.processing {
+  background: #007aff;
+}
+
+.history-status.completed {
+  background: #34c759;
+}
+
+.history-status.rejected {
+  background: #ff3b30;
+}
+
+.history-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10rpx;
+  font-size: 24rpx;
+  color: #666;
+}
+
+.history-amount {
+  color: #007aff;
+  font-weight: bold;
+  font-size: 26rpx;
+}
+
+.history-completed {
+  font-size: 22rpx;
+  color: #999;
+  text-align: right;
+}

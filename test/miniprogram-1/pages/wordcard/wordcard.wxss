@@ -1,0 +1,248 @@
+/* pages/wordcard/wordcard.wxss */
+.container {
+  padding: 20rpx;
+  background-color: #f8f8f8;
+  min-height: 100vh;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 30rpx;
+}
+
+.title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.section {
+  background: white;
+  border-radius: 10rpx;
+  margin-bottom: 20rpx;
+  padding: 30rpx;
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+  border-left: 4rpx solid #007aff;
+  padding-left: 10rpx;
+}
+
+/* 选择器 */
+.picker {
+  border: 1rpx solid #ddd;
+  border-radius: 6rpx;
+  padding: 15rpx;
+  background: white;
+  color: #333;
+}
+
+/* 表单 */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+
+.form-label {
+  font-size: 26rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.form-input {
+  border: 1rpx solid #ddd;
+  border-radius: 6rpx;
+  padding: 15rpx;
+  font-size: 26rpx;
+  background: white;
+}
+
+.search-btn {
+  background: #007aff;
+  color: white;
+  margin-top: 10rpx;
+}
+
+.search-btn[disabled] {
+  background: #ccc;
+}
+
+/* 结果区域 */
+.results {
+  margin-top: 30rpx;
+}
+
+.result-title {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+  padding-bottom: 10rpx;
+  border-bottom: 1rpx solid #e0e0e0;
+}
+
+/* 单词列表 */
+.words-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.word-item {
+  border: 1rpx solid #e0e0e0;
+  border-radius: 10rpx;
+  padding: 20rpx;
+  background: #fafafa;
+}
+
+.word-header {
+  margin-bottom: 15rpx;
+}
+
+.word-name {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #007aff;
+  margin-right: 20rpx;
+}
+
+.word-meaning {
+  font-size: 26rpx;
+  color: #333;
+}
+
+.word-meta {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  margin-bottom: 15rpx;
+  font-size: 24rpx;
+  color: #666;
+}
+
+.pronunciation {
+  color: #007aff;
+  text-decoration: underline;
+}
+
+.word-image {
+  width: 100%;
+  height: 200rpx;
+  border-radius: 8rpx;
+  overflow: hidden;
+  background: #f0f0f0;
+}
+
+.word-image image {
+  width: 100%;
+  height: 100%;
+}
+
+/* 单词卡片 */
+.word-card {
+  border: 2rpx solid #007aff;
+  border-radius: 15rpx;
+  padding: 30rpx;
+  background: linear-gradient(135deg, #f0f7ff 0%, #e8f4ff 100%);
+}
+
+.card-header {
+  text-align: center;
+  margin-bottom: 30rpx;
+}
+
+.card-word {
+  display: block;
+  font-size: 48rpx;
+  font-weight: bold;
+  color: #007aff;
+  margin-bottom: 10rpx;
+}
+
+.card-meaning {
+  display: block;
+  font-size: 28rpx;
+  color: #333;
+}
+
+.card-pronunciation {
+  display: flex;
+  align-items: center;
+  gap: 15rpx;
+  margin-bottom: 25rpx;
+}
+
+.pronunciation-label {
+  font-size: 26rpx;
+  color: #666;
+}
+
+.pronunciation-btn {
+  font-size: 26rpx;
+  color: #007aff;
+  text-decoration: underline;
+}
+
+.card-image {
+  margin-bottom: 25rpx;
+}
+
+.image-label {
+  display: block;
+  font-size: 26rpx;
+  color: #666;
+  margin-bottom: 10rpx;
+}
+
+.card-img {
+  width: 100%;
+  height: 300rpx;
+  border-radius: 10rpx;
+  border: 1rpx solid #ddd;
+}
+
+.card-meta {
+  background: white;
+  border-radius: 10rpx;
+  padding: 20rpx;
+}
+
+.meta-item {
+  display: flex;
+  margin-bottom: 10rpx;
+}
+
+.meta-item:last-child {
+  margin-bottom: 0;
+}
+
+.meta-label {
+  font-size: 24rpx;
+  color: #666;
+  width: 120rpx;
+}
+
+.meta-value {
+  font-size: 24rpx;
+  color: #333;
+  flex: 1;
+  word-break: break-all;
+}
+
+/* 清空按钮 */
+.clear-btn {
+  background: #ff3b30;
+  color: white;
+  width: 100%;
+}

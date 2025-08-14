@@ -39,6 +39,14 @@
 | DELETE | `/api/v1/users/:user_id/cart/items/:product_id` | 删除购物车商品 | 是 |
 | POST | `/api/v1/users/:user_id/orders` | 从购物车创建订单 | 是 |
 | GET | `/api/v1/users/:user_id/orders` | 获取订单历史 | 是 |
+| POST | `/api/v1/users/:user_id/orders/pay` | 创建微信支付订单 | 是 |
+
+### 6. 微信支付相关路由
+
+| 方法 | 路径 | 描述 | 认证 |
+|------|------|------|------|
+| POST | `/api/v1/users/:user_id/orders/pay` | 创建微信支付订单 | 是 |
+| POST | `/api/v1/wechat/pay/notify` | 微信支付回调通知 | 否 |
 
 ### 5. 学习进度相关路由
 
@@ -48,6 +56,14 @@
 | GET | `/api/v1/users/:user_id/progress` | 获取用户学习进度 | 是 |
 | PUT | `/api/v1/users/:user_id/progress` | 更新用户学习进度 | 是 |
 | GET | `/api/v1/books/:book_id/words` | 获取书籍单词 | 是 |
+
+### 5.1. 单词卡片相关路由
+
+| 方法 | 路径 | 描述 | 认证 |
+|------|------|------|------|
+| GET | `/api/units/:unit_id/words` | 根据单元ID获取该单元的所有单词列表 | 是 |
+| GET | `/api/words/:word_name/card` | 根据单词名称获取单词卡片详细信息（包括图片） | 是 |
+| GET | `/api/words?unit_name=xxx&book_name=xxx` | 通过单元名称和书籍名称获取单词列表（可选参数） | 是 |
 
 ### 6. 推荐系统相关路由
 
@@ -78,6 +94,7 @@
 - `user_controller.go` - 用户管理相关处理器
 - `store_controller.go` - 商城相关处理器
 - `progress_controller.go` - 学习进度相关处理器
+- `card_controller.go` - 单词卡片相关处理器
 - `referral_controller.go` - 推荐系统相关处理器
 - `agent_controller.go` - 代理系统相关处理器
 

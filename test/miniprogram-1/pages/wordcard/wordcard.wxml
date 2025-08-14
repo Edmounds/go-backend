@@ -1,0 +1,192 @@
+<!--pages/wordcard/wordcard.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="title">单词卡片测试</text>
+  </view>
+
+  <!-- 搜索类型选择 -->
+  <view class="section">
+    <view class="section-title">选择测试类型</view>
+    <picker range="{{searchOptions}}" range-key="label" value="{{searchType}}" bindchange="onSearchTypeChange">
+      <view class="picker">
+        {{searchOptions[searchType].label}}
+      </view>
+    </picker>
+  </view>
+
+  <!-- 按单元ID获取单词 -->
+  <view class="section" wx:if="{{searchType === 0}}">
+    <view class="section-title">按单元ID获取单词</view>
+    <view class="form">
+      <view class="form-item">
+        <text class="form-label">单元ID：</text>
+        <input 
+          class="form-input" 
+          value="{{unitId}}"
+          placeholder="请输入单元ID (如: 60f7b1c8e4b0c8a1234567ab)"
+          bindinput="onUnitIdInput"
+        />
+      </view>
+      <button class="search-btn" bindtap="getUnitWordsById" disabled="{{loading}}">
+        {{loading ? '获取中...' : '获取单词列表'}}
+      </button>
+    </view>
+
+    <!-- 单词列表结果 -->
+    <view class="results" wx:if="{{unitWords.length > 0}}">
+      <view class="result-title">单词列表 ({{unitWords.length}}个)</view>
+      <view class="words-list">
+        <view class="word-item" wx:for="{{unitWords}}" wx:key="id">
+          <view class="word-header">
+            <text class="word-name" bindtap="copyWord" data-word="{{item.word_name}}">
+              {{item.word_name}}
+            </text>
+            <text class="word-meaning">{{item.word_meaning}}</text>
+          </view>
+          <view class="word-meta">
+            <text class="pronunciation" wx:if="{{item.pronunciation_url}}" 
+                  bindtap="playPronunciation" data-url="{{item.pronunciation_url}}">
+              🔊 播放发音
+            </text>
+            <text class="unit-info">单元: {{item.unit_id}}</text>
+          </view>
+          <view class="word-image" wx:if="{{item.img_url}}">
+            <image 
+              src="{{item.img_url}}" 
+              mode="aspectFit" 
+              bindtap="previewImage" 
+              data-url="{{item.img_url}}"
+              lazy-load
+            />
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 按单元名称获取单词 -->
+  <view class="section" wx:if="{{searchType === 1}}">
+    <view class="section-title">按单元名称获取单词</view>
+    <view class="form">
+      <view class="form-item">
+        <text class="form-label">单元名称：</text>
+        <input 
+          class="form-input" 
+          value="{{unitName}}"
+          placeholder="请输入单元名称 (如: Unit 1)"
+          bindinput="onUnitNameInput"
+        />
+      </view>
+      <view class="form-item">
+        <text class="form-label">书籍名称 (可选)：</text>
+        <input 
+          class="form-input" 
+          value="{{bookName}}"
+          placeholder="请输入书籍名称"
+          bindinput="onBookNameInput"
+        />
+      </view>
+      <button class="search-btn" bindtap="getWordsByUnitName" disabled="{{loading}}">
+        {{loading ? '获取中...' : '获取单词列表'}}
+      </button>
+    </view>
+
+    <!-- 按名称获取的单词结果 -->
+    <view class="results" wx:if="{{wordsByName.length > 0}}">
+      <view class="result-title">单词列表 ({{wordsByName.length}}个)</view>
+      <view class="words-list">
+        <view class="word-item" wx:for="{{wordsByName}}" wx:key="id">
+          <view class="word-header">
+            <text class="word-name" bindtap="copyWord" data-word="{{item.word_name}}">
+              {{item.word_name}}
+            </text>
+            <text class="word-meaning">{{item.word_meaning}}</text>
+          </view>
+          <view class="word-meta">
+            <text class="pronunciation" wx:if="{{item.pronunciation_url}}" 
+                  bindtap="playPronunciation" data-url="{{item.pronunciation_url}}">
+              🔊 播放发音
+            </text>
+            <text class="book-info">书籍: {{item.book_id}}</text>
+          </view>
+          <view class="word-image" wx:if="{{item.img_url}}">
+            <image 
+              src="{{item.img_url}}" 
+              mode="aspectFit" 
+              bindtap="previewImage" 
+              data-url="{{item.img_url}}"
+              lazy-load
+            />
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 按单词名称获取卡片 -->
+  <view class="section" wx:if="{{searchType === 2}}">
+    <view class="section-title">按单词名称获取卡片</view>
+    <view class="form">
+      <view class="form-item">
+        <text class="form-label">单词名称：</text>
+        <input 
+          class="form-input" 
+          value="{{wordName}}"
+          placeholder="请输入单词名称 (如: computer)"
+          bindinput="onWordNameInput"
+        />
+      </view>
+      <button class="search-btn" bindtap="getWordCard" disabled="{{loading}}">
+        {{loading ? '获取中...' : '获取单词卡片'}}
+      </button>
+    </view>
+
+    <!-- 单词卡片结果 -->
+    <view class="results" wx:if="{{wordCard}}">
+      <view class="result-title">单词卡片详情</view>
+      <view class="word-card">
+        <view class="card-header">
+          <text class="card-word" bindtap="copyWord" data-word="{{wordCard.word_name}}">
+            {{wordCard.word_name}}
+          </text>
+          <text class="card-meaning">{{wordCard.word_meaning}}</text>
+        </view>
+        
+        <view class="card-pronunciation" wx:if="{{wordCard.pronunciation_url}}">
+          <text class="pronunciation-label">发音：</text>
+          <text class="pronunciation-btn" bindtap="playPronunciation" data-url="{{wordCard.pronunciation_url}}">
+            🔊 播放发音
+          </text>
+        </view>
+        
+        <view class="card-image" wx:if="{{wordCard.img_url}}">
+          <text class="image-label">配图：</text>
+          <image 
+            src="{{wordCard.img_url}}" 
+            mode="aspectFit" 
+            class="card-img"
+            bindtap="previewImage" 
+            data-url="{{wordCard.img_url}}"
+            lazy-load
+          />
+        </view>
+        
+        <view class="card-meta">
+          <view class="meta-item">
+            <text class="meta-label">单元ID：</text>
+            <text class="meta-value">{{wordCard.unit_id}}</text>
+          </view>
+          <view class="meta-item">
+            <text class="meta-label">书籍ID：</text>
+            <text class="meta-value">{{wordCard.book_id}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 清空按钮 -->
+  <view class="section" wx:if="{{unitWords.length > 0 || wordsByName.length > 0 || wordCard}}">
+    <button class="clear-btn" bindtap="clearResults">清空结果</button>
+  </view>
+</view>

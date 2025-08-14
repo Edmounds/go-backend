@@ -1,0 +1,199 @@
+<!--pages/qrcode/qrcode.wxml-->
+<view class="container">
+  <!-- 页面标题 -->
+  <view class="page-header">
+    <text class="page-title">二维码生成测试</text>
+    <text class="page-desc">测试小程序二维码生成功能</text>
+  </view>
+
+  <!-- 登录检查 -->
+  <view wx:if="{{!isLoggedIn}}" class="login-prompt">
+    <view class="prompt-content">
+      <text class="prompt-text">请先登录以使用二维码功能</text>
+      <button class="login-btn" bindtap="doLogin">前往登录</button>
+    </view>
+  </view>
+
+  <!-- 主要内容 -->
+  <view wx:else class="main-content">
+    
+    <!-- 快速预设 -->
+    <view class="section">
+      <view class="section-title">
+        <text>快速预设</text>
+      </view>
+      <view class="preset-list">
+        <view 
+          wx:for="{{presetScenes}}" 
+          wx:key="scene" 
+          class="preset-item"
+          bindtap="usePresetScene"
+          data-index="{{index}}"
+        >
+          <text class="preset-name">{{item.name}}</text>
+          <text class="preset-scene">{{item.scene}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 基础参数 -->
+    <view class="section">
+      <view class="section-title">
+        <text>基础参数</text>
+      </view>
+      
+      <view class="form-item">
+        <text class="label">场景值 *</text>
+        <view class="input-group">
+          <input 
+            class="input" 
+            placeholder="请输入场景值(1-32字符)" 
+            value="{{scene}}"
+            bindinput="onSceneInput"
+            maxlength="32"
+          />
+          <button class="copy-btn" bindtap="copyScene" size="mini">复制</button>
+        </view>
+      </view>
+
+      <view class="form-item">
+        <text class="label">跳转页面</text>
+        <input 
+          class="input" 
+          placeholder="pages/index/index" 
+          value="{{page}}"
+          bindinput="onPageInput"
+        />
+      </view>
+
+      <view class="form-item">
+        <text class="label">二维码宽度</text>
+        <input 
+          class="input" 
+          type="number" 
+          placeholder="280" 
+          value="{{width}}"
+          bindinput="onWidthInput"
+        />
+        <text class="help-text">范围: 100-1280</text>
+      </view>
+
+      <view class="form-item">
+        <text class="label">环境版本</text>
+        <picker 
+          bindchange="onEnvVersionChange" 
+          value="{{envVersion}}" 
+          range="{{envVersionOptions}}" 
+          range-key="name"
+        >
+          <view class="picker">
+            {{envVersionOptions[0].name}}
+            <text wx:for="{{envVersionOptions}}" wx:key="value" wx:if="{{item.value === envVersion}}">{{item.name}}</text>
+          </view>
+        </picker>
+      </view>
+    </view>
+
+    <!-- 高级选项 -->
+    <view class="section">
+      <view class="section-title">
+        <text>高级选项</text>
+      </view>
+
+      <view class="form-item switch-item">
+        <text class="label">检查页面路径</text>
+        <switch checked="{{checkPath}}" bindchange="onCheckPathChange" />
+      </view>
+
+      <view class="form-item switch-item">
+        <text class="label">自动配色</text>
+        <switch checked="{{autoColor}}" bindchange="onAutoColorChange" />
+      </view>
+
+      <view class="form-item switch-item">
+        <text class="label">透明底色</text>
+        <switch checked="{{isHyaline}}" bindchange="onIsHyalineChange" />
+      </view>
+
+      <!-- 线条颜色设置 -->
+      <view wx:if="{{!autoColor}}" class="color-section">
+        <text class="color-title">线条颜色 (RGB)</text>
+        <view class="color-inputs">
+          <view class="color-input-item">
+            <text class="color-label">R</text>
+            <input 
+              class="color-input" 
+              type="number" 
+              value="{{lineColor.r}}" 
+              bindinput="onRedInput"
+              maxlength="3"
+            />
+          </view>
+          <view class="color-input-item">
+            <text class="color-label">G</text>
+            <input 
+              class="color-input" 
+              type="number" 
+              value="{{lineColor.g}}" 
+              bindinput="onGreenInput"
+              maxlength="3"
+            />
+          </view>
+          <view class="color-input-item">
+            <text class="color-label">B</text>
+            <input 
+              class="color-input" 
+              type="number" 
+              value="{{lineColor.b}}" 
+              bindinput="onBlueInput"
+              maxlength="3"
+            />
+          </view>
+        </view>
+        <view class="color-preview" style="background-color: rgb({{lineColor.r}}, {{lineColor.g}}, {{lineColor.b}});"></view>
+      </view>
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="action-section">
+      <button 
+        class="generate-btn" 
+        bindtap="generateQRCode" 
+        loading="{{loading}}"
+        disabled="{{loading || !scene}}"
+      >
+        {{loading ? '生成中...' : '生成二维码'}}
+      </button>
+      
+      <button class="clear-btn" bindtap="clearForm">清空表单</button>
+    </view>
+
+    <!-- 二维码显示区域 -->
+    <view wx:if="{{qrCodeVisible}}" class="qrcode-section">
+      <view class="qrcode-header">
+        <text class="qrcode-title">生成的二维码</text>
+        <text class="close-btn" bindtap="hideQRCode">✕</text>
+      </view>
+      
+      <view class="qrcode-container">
+        <image 
+          class="qrcode-image" 
+          src="{{qrCodeImage}}" 
+          mode="aspectFit"
+          bindtap="previewQRCode"
+        />
+      </view>
+      
+      <view class="qrcode-info">
+        <text class="info-item">场景值: {{scene}}</text>
+        <text class="info-item">页面: {{page}}</text>
+        <text class="info-item">尺寸: {{width}}px</text>
+      </view>
+      
+      <view class="qrcode-actions">
+        <button class="action-btn preview-btn" bindtap="previewQRCode">预览</button>
+        <button class="action-btn save-btn" bindtap="saveQRCode">保存到相册</button>
+      </view>
+    </view>
+  </view>
+</view>

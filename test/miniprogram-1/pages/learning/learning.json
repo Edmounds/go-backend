@@ -1,0 +1,6 @@
+{
+  "usingComponents": {},
+  "navigationBarTitleText": "学习进度测试",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
+}

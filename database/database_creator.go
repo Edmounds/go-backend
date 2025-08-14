@@ -87,6 +87,10 @@ func (dc *DatabaseCreator) CreateUsersCollection(ctx context.Context) error {
 	// 创建索引
 	indexes := []mongo.IndexModel{
 		{
+			Keys:    bson.D{{Key: "openID", Value: 1}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
 			Keys:    bson.D{{Key: "user_name", Value: 1}},
 			Options: options.Index().SetUnique(true),
 		},
@@ -117,6 +121,7 @@ func (dc *DatabaseCreator) CreateUsersCollection(ctx context.Context) error {
 	// 插入示例数据
 	sampleData := bson.M{
 		"_id":             primitive.NewObjectID(),
+		"openID":          "sample_openid_123", // 添加openID字段
 		"user_name":       "john_doe",
 		"user_password":   "$2b$10$hashed_password_example",
 		"class":           "计算机科学与技术1班",
@@ -129,9 +134,8 @@ func (dc *DatabaseCreator) CreateUsersCollection(ctx context.Context) error {
 		"collected_cards": bson.A{},
 		"addresses":       bson.A{},
 		"progress": bson.M{
-			"current_unit":     "Unit 1",
-			"current_sentence": "Hello, how are you?",
-			"learned_words":    bson.A{"hello", "how", "are", "you"},
+			"current_unit":  "Unit 1",
+			"learned_words": bson.A{"hello", "how", "are", "you"},
 		},
 		"is_agent":        false,
 		"agent_type":      nil,
@@ -206,10 +210,10 @@ func (dc *DatabaseCreator) CreateAddressesCollection(ctx context.Context) error 
 	// 创建索引
 	indexes := []mongo.IndexModel{
 		{
-			Keys: bson.D{{Key: "user_id", Value: 1}},
+			Keys: bson.D{{Key: "user_openid", Value: 1}},
 		},
 		{
-			Keys: bson.D{{Key: "user_id", Value: 1}, {Key: "is_default", Value: 1}},
+			Keys: bson.D{{Key: "user_openid", Value: 1}, {Key: "is_default", Value: 1}},
 		},
 	}
 
@@ -221,7 +225,7 @@ func (dc *DatabaseCreator) CreateAddressesCollection(ctx context.Context) error 
 	// 插入示例数据 (需要先有用户数据)
 	sampleData := bson.M{
 		"_id":            primitive.NewObjectID(),
-		"user_id":        primitive.NewObjectID(), // 实际使用时应该引用真实的用户ID
+		"user_openid":    "sample_openid_123", // 使用openID而不是MongoDB的_id
 		"recipient_name": "张三",
 		"phone":          "13800138001",
 		"province":       "北京市",
@@ -253,7 +257,7 @@ func (dc *DatabaseCreator) CreateCartsCollection(ctx context.Context) error {
 	// 创建索引
 	indexes := []mongo.IndexModel{
 		{
-			Keys:    bson.D{{Key: "user_id", Value: 1}},
+			Keys:    bson.D{{Key: "user_openid", Value: 1}},
 			Options: options.Index().SetUnique(true),
 		},
 		{
@@ -269,19 +273,19 @@ func (dc *DatabaseCreator) CreateCartsCollection(ctx context.Context) error {
 
 	// 插入示例数据
 	sampleData := bson.M{
-		"_id":     primitive.NewObjectID(),
-		"cart_id": "CART001",
-		"user_id": primitive.NewObjectID(), // 实际使用时应该引用真实的用户ID
+		"_id":         primitive.NewObjectID(),
+		"cart_id":     "CART001",
+		"user_openid": "sample_openid_123", // 使用openID而不是MongoDB的_id
 		"items": bson.A{
 			bson.M{
-				"product_id": primitive.NewObjectID(), // 实际使用时应该引用真实的商品ID
+				"product_id": "PROD001", // 使用产品ID字符串
 				"quantity":   1,
 				"price":      99.9,
 			},
 		},
-		"total_price": 99.9,
-		"created_at":  time.Now(),
-		"updated_at":  time.Now(),
+		"total_amount": 99.9,
+		"created_at":   time.Now(),
+		"updated_at":   time.Now(),
 	}
 
 	_, err = collection.InsertOne(ctx, sampleData)
@@ -307,7 +311,7 @@ func (dc *DatabaseCreator) CreateOrdersCollection(ctx context.Context) error {
 			Options: options.Index().SetUnique(true),
 		},
 		{
-			Keys: bson.D{{Key: "user_id", Value: 1}},
+			Keys: bson.D{{Key: "user_openid", Value: 1}},
 		},
 		{
 			Keys: bson.D{{Key: "status", Value: 1}},
@@ -327,13 +331,13 @@ func (dc *DatabaseCreator) CreateOrdersCollection(ctx context.Context) error {
 
 	// 插入示例数据
 	sampleData := bson.M{
-		"_id":        primitive.NewObjectID(),
-		"order_id":   "ORDER001",
-		"user_id":    primitive.NewObjectID(), // 实际使用时应该引用真实的用户ID
-		"address_id": primitive.NewObjectID(), // 实际使用时应该引用真实的地址ID
-		"products": bson.A{
+		"_id":         primitive.NewObjectID(),
+		"order_id":    "ORDER001",
+		"user_openid": "sample_openid_123", // 使用openID而不是MongoDB的_id
+		"address_id":  "ADDR001",           // 使用地址ID字符串
+		"items": bson.A{
 			bson.M{
-				"product_id": primitive.NewObjectID(), // 实际使用时应该引用真实的商品ID
+				"product_id": "PROD001", // 使用产品ID字符串
 				"quantity":   1,
 				"price":      99.9,
 			},
@@ -386,7 +390,7 @@ func (dc *DatabaseCreator) CreateReferralsCollection(ctx context.Context) error 
 			Options: options.Index().SetUnique(true),
 		},
 		{
-			Keys:    bson.D{{Key: "user_id", Value: 1}},
+			Keys:    bson.D{{Key: "user_openid", Value: 1}},
 			Options: options.Index().SetUnique(true),
 		},
 	}
@@ -400,7 +404,7 @@ func (dc *DatabaseCreator) CreateReferralsCollection(ctx context.Context) error 
 	sampleData := bson.M{
 		"_id":           primitive.NewObjectID(),
 		"referral_code": "JOHN123",
-		"user_id":       primitive.NewObjectID(), // 实际使用时应该引用真实的用户ID
+		"user_openid":   "sample_openid_123", // 使用openID而不是MongoDB的_id
 		"used_by":       bson.A{},
 		"created_at":    time.Now(),
 		"updated_at":    time.Now(),
@@ -429,7 +433,7 @@ func (dc *DatabaseCreator) CreateCommissionsCollection(ctx context.Context) erro
 			Options: options.Index().SetUnique(true),
 		},
 		{
-			Keys: bson.D{{Key: "user_id", Value: 1}},
+			Keys: bson.D{{Key: "user_openid", Value: 1}},
 		},
 		{
 			Keys: bson.D{{Key: "status", Value: 1}},
@@ -451,7 +455,7 @@ func (dc *DatabaseCreator) CreateCommissionsCollection(ctx context.Context) erro
 	sampleData := bson.M{
 		"_id":           primitive.NewObjectID(),
 		"commission_id": "COMM001",
-		"user_id":       primitive.NewObjectID(), // 实际使用时应该引用真实的用户ID
+		"user_openid":   "sample_openid_123", // 使用openID而不是MongoDB的_id
 		"amount":        10.5,
 		"date":          time.Now(),
 		"status":        "pending",

@@ -1,0 +1,219 @@
+/* pages/learning/learning.wxss */
+.container {
+  padding: 20rpx;
+  background-color: #f8f8f8;
+  min-height: 100vh;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 30rpx;
+}
+
+.title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.loading {
+  text-align: center;
+  padding: 100rpx 0;
+  color: #666;
+}
+
+.section {
+  background: white;
+  border-radius: 10rpx;
+  margin-bottom: 20rpx;
+  padding: 30rpx;
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+  border-left: 4rpx solid #007aff;
+  padding-left: 10rpx;
+}
+
+/* 进度信息 */
+.progress-info {
+  background: #f0f7ff;
+  border-radius: 10rpx;
+  padding: 20rpx;
+}
+
+.info-item {
+  display: flex;
+  margin-bottom: 10rpx;
+}
+
+.label {
+  color: #666;
+  width: 160rpx;
+  font-size: 26rpx;
+}
+
+.value {
+  color: #333;
+  font-size: 26rpx;
+  flex: 1;
+}
+
+/* 书籍列表 */
+.books-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15rpx;
+}
+
+.book-item {
+  border: 2rpx solid #e0e0e0;
+  border-radius: 10rpx;
+  padding: 20rpx;
+  transition: all 0.3s;
+}
+
+.book-item.selected {
+  border-color: #007aff;
+  background: #f0f7ff;
+}
+
+.book-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10rpx;
+}
+
+.book-info {
+  display: flex;
+  gap: 20rpx;
+  font-size: 24rpx;
+  color: #666;
+}
+
+.book-level {
+  background: #007aff;
+  color: white;
+  padding: 4rpx 10rpx;
+  border-radius: 6rpx;
+}
+
+/* 单词列表 */
+.words-list {
+  max-height: 400rpx;
+  overflow-y: auto;
+}
+
+.word-item {
+  border-bottom: 1rpx solid #f0f0f0;
+  padding: 15rpx 0;
+}
+
+.word-item:last-child {
+  border-bottom: none;
+}
+
+.word-content {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.word-name {
+  font-weight: bold;
+  color: #333;
+  font-size: 28rpx;
+  margin-right: 20rpx;
+}
+
+.word-definition {
+  color: #666;
+  font-size: 26rpx;
+  flex: 1;
+}
+
+.word-meta {
+  display: flex;
+  gap: 20rpx;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.word-difficulty {
+  background: #ff9500;
+  color: white;
+  padding: 2rpx 8rpx;
+  border-radius: 4rpx;
+}
+
+/* 表单 */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+
+.form-label {
+  font-size: 26rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.form-input {
+  border: 1rpx solid #ddd;
+  border-radius: 6rpx;
+  padding: 15rpx;
+  font-size: 26rpx;
+  background: white;
+}
+
+.add-word-btn {
+  background: #007aff;
+  color: white;
+  width: 150rpx;
+  margin-top: 10rpx;
+}
+
+.learned-words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 10rpx;
+}
+
+.word-tag {
+  background: #e8f4ff;
+  color: #007aff;
+  padding: 8rpx 12rpx;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+  border: 1rpx solid #007aff;
+}
+
+.form-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 20rpx;
+}
+
+.save-btn {
+  background: #007aff;
+  color: white;
+  flex: 1;
+}
+
+.clear-btn {
+  background: #ff3b30;
+  color: white;
+  flex: 1;
+}

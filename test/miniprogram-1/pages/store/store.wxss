@@ -1,0 +1,415 @@
+/* pages/store/store.wxss */
+.container {
+  padding: 20rpx;
+  background-color: #f8f8f8;
+  min-height: 100vh;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 30rpx;
+}
+
+.title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+  display: block;
+}
+
+.nav-buttons {
+  display: flex;
+  gap: 20rpx;
+  justify-content: center;
+}
+
+.nav-btn {
+  background: #007aff;
+  color: white;
+}
+
+.loading {
+  text-align: center;
+  padding: 100rpx 0;
+  color: #666;
+}
+
+.section {
+  background: white;
+  border-radius: 10rpx;
+  margin-bottom: 20rpx;
+  padding: 30rpx;
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+  border-left: 4rpx solid #007aff;
+  padding-left: 10rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.status-picker {
+  background: #f0f0f0;
+  padding: 10rpx 20rpx;
+  border-radius: 6rpx;
+  font-size: 24rpx;
+  color: #666;
+}
+
+/* 商品网格 */
+.products-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.product-item {
+  border: 1rpx solid #e0e0e0;
+  border-radius: 10rpx;
+  padding: 20rpx;
+  background: #fafafa;
+}
+
+.product-image {
+  width: 100%;
+  height: 200rpx;
+  border-radius: 8rpx;
+  overflow: hidden;
+  background: #f0f0f0;
+  margin-bottom: 15rpx;
+}
+
+.product-image image {
+  width: 100%;
+  height: 100%;
+}
+
+.product-info {
+  margin-bottom: 15rpx;
+}
+
+.product-name {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8rpx;
+  display: block;
+}
+
+.product-description {
+  font-size: 24rpx;
+  color: #666;
+  margin-bottom: 10rpx;
+  display: block;
+}
+
+.product-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.product-price {
+  font-size: 26rpx;
+  color: #ff3b30;
+  font-weight: bold;
+}
+
+.product-stock {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.product-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.view-btn {
+  background: #007aff;
+  color: white;
+}
+
+.cart-controls {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.cart-btn {
+  background: #007aff;
+  color: white;
+  min-width: 60rpx;
+}
+
+.cart-btn.decrease {
+  background: #ff3b30;
+}
+
+.cart-quantity {
+  font-size: 24rpx;
+  color: #333;
+  min-width: 40rpx;
+  text-align: center;
+}
+
+/* 商品详情 */
+.product-detail {
+  border: 1rpx solid #e0e0e0;
+  border-radius: 10rpx;
+  padding: 20rpx;
+  background: #fafafa;
+}
+
+.detail-images {
+  display: flex;
+  gap: 10rpx;
+  margin-bottom: 20rpx;
+  overflow-x: auto;
+}
+
+.detail-image {
+  width: 200rpx;
+  height: 200rpx;
+  border-radius: 8rpx;
+  flex-shrink: 0;
+}
+
+.detail-name {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10rpx;
+  display: block;
+}
+
+.detail-description {
+  font-size: 26rpx;
+  color: #666;
+  margin-bottom: 15rpx;
+  display: block;
+}
+
+.detail-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  font-size: 24rpx;
+}
+
+.detail-price {
+  color: #ff3b30;
+  font-weight: bold;
+}
+
+.detail-stock, .detail-id {
+  color: #999;
+}
+
+/* 购物车 */
+.cart-items {
+  display: flex;
+  flex-direction: column;
+  gap: 15rpx;
+  margin-bottom: 20rpx;
+}
+
+.cart-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f0f7ff;
+  padding: 15rpx;
+  border-radius: 8rpx;
+}
+
+.cart-product {
+  font-size: 24rpx;
+  color: #333;
+  flex: 1;
+}
+
+.cart-quantity {
+  font-size: 24rpx;
+  color: #666;
+  margin: 0 20rpx;
+}
+
+.remove-btn {
+  background: #ff3b30;
+  color: white;
+}
+
+.create-order-btn {
+  background: #34c759;
+  color: white;
+  width: 100%;
+}
+
+/* 模态框 */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 15rpx;
+  width: 90%;
+  max-width: 600rpx;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx;
+  border-bottom: 1rpx solid #e0e0e0;
+}
+
+.modal-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.modal-close {
+  font-size: 32rpx;
+  color: #999;
+}
+
+.modal-body {
+  padding: 30rpx;
+}
+
+.form-item {
+  margin-bottom: 25rpx;
+}
+
+.form-label {
+  font-size: 26rpx;
+  color: #333;
+  margin-bottom: 10rpx;
+  display: block;
+}
+
+.form-input {
+  border: 1rpx solid #ddd;
+  border-radius: 6rpx;
+  padding: 15rpx;
+  font-size: 26rpx;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modal-footer {
+  display: flex;
+  border-top: 1rpx solid #e0e0e0;
+}
+
+.modal-btn {
+  flex: 1;
+  border: none;
+  padding: 30rpx 0;
+  font-size: 28rpx;
+  border-radius: 0;
+}
+
+.modal-btn.cancel {
+  background: #f8f8f8;
+  color: #666;
+}
+
+.modal-btn.confirm {
+  background: #007aff;
+  color: white;
+}
+
+/* 订单列表 */
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.order-item {
+  border: 1rpx solid #e0e0e0;
+  border-radius: 10rpx;
+  padding: 20rpx;
+  background: #fafafa;
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15rpx;
+}
+
+.order-id {
+  font-size: 26rpx;
+  color: #333;
+  font-weight: bold;
+}
+
+.order-status {
+  font-size: 24rpx;
+  color: #007aff;
+  background: #e8f4ff;
+  padding: 6rpx 12rpx;
+  border-radius: 6rpx;
+}
+
+.order-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15rpx;
+  font-size: 24rpx;
+  color: #666;
+}
+
+.order-amount {
+  color: #ff3b30;
+  font-weight: bold;
+}
+
+.order-items {
+  border-top: 1rpx solid #e0e0e0;
+  padding-top: 15rpx;
+}
+
+.order-items-title {
+  font-size: 24rpx;
+  color: #333;
+  font-weight: bold;
+  margin-bottom: 10rpx;
+  display: block;
+}
+
+.order-item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5rpx;
+}
+
+.order-item-detail {
+  font-size: 22rpx;
+  color: #666;
+  background: #f0f0f0;
+  padding: 8rpx 12rpx;
+  border-radius: 4rpx;
+}

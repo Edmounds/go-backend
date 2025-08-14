@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -25,7 +24,7 @@ type User struct {
 // 定义JWT声明结构体
 type Claims struct {
 	UserName string
-	UserId   string
+	UserId   string // 注意：这里存储的是用户的 OpenID，不是 MongoDB 的 _id
 	jwt.RegisteredClaims
 }
 
@@ -166,7 +165,7 @@ func RefreshToken(tokenString string, getUserFunc func(string) (bson.M, error)) 
 
 	new_user := User{
 		UserName:     user["user_name"].(string),
-		UserId:       user["_id"].(primitive.ObjectID).Hex(),
+		UserId:       openID, // 使用 OpenID 而不是 MongoDB 的 _id
 		UserPassword: user["user_password"].(string),
 		OpenID:       openID,
 	}

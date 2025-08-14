@@ -1,0 +1,121 @@
+<!--pages/learning/learning.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="title">学习进度测试</text>
+  </view>
+
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading">
+    <text>加载中...</text>
+  </view>
+
+  <view wx:else>
+    <!-- 当前学习进度 -->
+    <view class="section">
+      <view class="section-title">当前学习进度</view>
+      <view class="progress-info" wx:if="{{userProgress}}">
+        <view class="info-item">
+          <text class="label">当前单元：</text>
+          <text class="value">{{userProgress.current_unit || '未设置'}}</text>
+        </view>
+        <view class="info-item">
+          <text class="label">当前句子：</text>
+          <text class="value">{{userProgress.current_sentence || '未设置'}}</text>
+        </view>
+        <view class="info-item">
+          <text class="label">已学单词数：</text>
+          <text class="value">{{userProgress.total_words || 0}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 书籍列表 -->
+    <view class="section">
+      <view class="section-title">书籍列表 ({{books.length}})</view>
+      <view class="books-list">
+        <view 
+          class="book-item {{selectedBook && selectedBook.id === item._id ? 'selected' : ''}}"
+          wx:for="{{books}}" 
+          wx:key="_id"
+          bindtap="selectBook"
+          data-book-id="{{item._id}}"
+          data-book-name="{{item.title}}"
+        >
+          <view class="book-title">{{item.title}}</view>
+          <view class="book-info">
+            <text class="book-level">{{item.level}}</text>
+            <text class="book-words">{{item.total_words}}词</text>
+            <text class="book-units">{{item.units}}单元</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 选中书籍的单词 -->
+    <view class="section" wx:if="{{selectedBook}}">
+      <view class="section-title">
+        《{{selectedBook.name}}》单词列表 ({{bookWords.length}})
+      </view>
+      <view class="words-list">
+        <view class="word-item" wx:for="{{bookWords}}" wx:key="_id">
+          <view class="word-content">
+            <text class="word-name">{{item.word}}</text>
+            <text class="word-definition">{{item.definition}}</text>
+          </view>
+          <view class="word-meta">
+            <text class="word-pronunciation">{{item.pronunciation}}</text>
+            <text class="word-difficulty">{{item.difficulty}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 进度更新表单 -->
+    <view class="section">
+      <view class="section-title">更新学习进度</view>
+      <view class="form">
+        <view class="form-item">
+          <text class="form-label">当前单元：</text>
+          <input 
+            class="form-input" 
+            value="{{progressData.currentUnit}}"
+            placeholder="请输入当前学习单元"
+            bindinput="onCurrentUnitInput"
+          />
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">当前句子：</text>
+          <input 
+            class="form-input" 
+            value="{{progressData.currentSentence}}"
+            placeholder="请输入当前学习句子"
+            bindinput="onCurrentSentenceInput"
+          />
+        </view>
+        
+        <view class="form-item">
+          <view class="form-label">已学单词 ({{progressData.learnedWords.length}})：</view>
+          <button class="add-word-btn" bindtap="addLearnedWord" size="mini">添加单词</button>
+        </view>
+        
+        <view class="learned-words">
+          <view 
+            class="word-tag" 
+            wx:for="{{progressData.learnedWords}}" 
+            wx:key="*this"
+            bindtap="removeLearnedWord"
+            data-index="{{index}}"
+          >
+            {{item}} ×
+          </view>
+        </view>
+        
+        <view class="form-actions">
+          <button class="save-btn" bindtap="saveProgress">保存进度</button>
+          <button class="clear-btn" bindtap="clearProgress">清空数据</button>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

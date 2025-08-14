@@ -2114,7 +2114,7 @@
           {
             "name": "region",
             "in": "query",
-            "description": "地区筛选（省代理）",
+                            "description": "地区筛选（区域代理）",
             "required": false,
             "example": "北京市",
             "schema": {
@@ -2498,7 +2498,7 @@
               1,
               2
             ],
-            "description": "代理等级 (0: 非代理, 1: 校代理, 2: 省代理)",
+            "description": "代理等级 (0: 非代理, 1: 校代理, 2: 区域代理)",
             "example": 0
           },
           "referral_code": {
@@ -2542,7 +2542,7 @@
             "type": "string",
             "enum": [
               "school",
-              "province"
+              "region"
             ],
             "description": "代理类型"
           },
@@ -2558,7 +2558,7 @@
             "items": {
               "type": "string"
             },
-            "description": "代理管理的地区（省代理）"
+            "description": "代理管理的地区（区域代理）"
           },
           "created_at": {
             "type": "string",

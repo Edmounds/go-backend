@@ -1,0 +1,98 @@
+<!--pages/profile/profile.wxml-->
+<view class="container">
+  <!-- 头部欢迎区域 -->
+  <view class="header">
+    <view class="welcome-section">
+      <text class="app-title">小程序功能测试平台</text>
+      <text class="app-subtitle">微信小程序英语学习平台完整测试工具</text>
+    </view>
+    
+    <!-- 用户状态 -->
+    <view class="user-status">
+      <view wx:if="{{isLoggedIn}}" class="logged-in-user">
+        <view class="user-info">
+          <text class="user-welcome">欢迎回来</text>
+          <text class="user-id">{{userInfo.openID}}</text>
+        </view>
+        <button class="user-manage-btn" bindtap="manageUserInfo" size="mini">管理账户</button>
+      </view>
+      <view wx:else class="not-logged-in">
+        <text class="login-prompt">请先登录以使用完整功能</text>
+        <button class="quick-login-btn" bindtap="quickLogin" size="mini">快速登录</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 功能测试模块 -->
+  <view class="test-modules">
+    <view class="modules-title">功能测试模块</view>
+    <view class="modules-grid">
+      <view 
+        class="module-card {{item.requireAuth && !isLoggedIn ? 'disabled' : ''}}"
+        wx:for="{{testModules}}" 
+        wx:key="name"
+        bindtap="navigateToTest"
+        data-module="{{item}}"
+      >
+        <view class="module-icon">{{item.icon}}</view>
+        <view class="module-info">
+          <text class="module-name">{{item.name}}</text>
+          <text class="module-desc">{{item.desc}}</text>
+        </view>
+        <view class="module-status">
+          <text wx:if="{{item.requireAuth && !isLoggedIn}}" class="need-login">需要登录</text>
+          <text wx:else class="can-access">点击测试</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 快捷操作 -->
+  <view class="quick-actions">
+    <view class="actions-title">快捷操作</view>
+    <view class="actions-grid">
+      <button class="action-btn" bindtap="viewApiDocs">
+        <text class="action-icon">📋</text>
+        <text class="action-text">API文档</text>
+      </button>
+      <button class="action-btn" bindtap="aboutApp">
+        <text class="action-icon">ℹ️</text>
+        <text class="action-text">关于应用</text>
+      </button>
+      <button class="action-btn" wx:if="{{isLoggedIn}}" bindtap="logout">
+        <text class="action-icon">🚪</text>
+        <text class="action-text">退出登录</text>
+      </button>
+      <button class="action-btn" wx:else bindtap="quickLogin">
+        <text class="action-icon">🔑</text>
+        <text class="action-text">立即登录</text>
+      </button>
+    </view>
+  </view>
+
+  <!-- 功能统计 -->
+  <view class="feature-stats">
+    <view class="stats-title">功能覆盖统计</view>
+    <view class="stats-content">
+      <view class="stat-item">
+        <text class="stat-number">9</text>
+        <text class="stat-label">测试模块</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-number">30+</text>
+        <text class="stat-label">API接口</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-number">6</text>
+        <text class="stat-label">核心功能</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部说明 -->
+  <view class="footer-info">
+    <text class="footer-text">这是一个完整的微信小程序测试工具</text>
+    <text class="footer-text">包含前端界面和后端API的全面测试</text>
+    <text class="footer-text">适用于开发、测试和演示场景</text>
+  </view>
+</view>

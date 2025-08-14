@@ -1,0 +1,289 @@
+/* pages/profile/profile.wxss */
+.container {
+  padding: 20rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+}
+
+/* 头部欢迎区域 */
+.header {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20rpx;
+  padding: 40rpx 30rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.1);
+}
+
+.welcome-section {
+  text-align: center;
+  margin-bottom: 30rpx;
+}
+
+.app-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10rpx;
+  display: block;
+}
+
+.app-subtitle {
+  font-size: 24rpx;
+  color: #666;
+  line-height: 1.5;
+}
+
+.user-status {
+  border-top: 1rpx solid #f0f0f0;
+  padding-top: 25rpx;
+}
+
+.logged-in-user {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.user-welcome {
+  font-size: 26rpx;
+  color: #333;
+  font-weight: 500;
+  margin-bottom: 5rpx;
+}
+
+.user-id {
+  font-size: 22rpx;
+  color: #999;
+  word-break: break-all;
+}
+
+.user-manage-btn {
+  background: #007aff;
+  color: white;
+}
+
+.not-logged-in {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.login-prompt {
+  font-size: 26rpx;
+  color: #666;
+}
+
+.quick-login-btn {
+  background: #34c759;
+  color: white;
+}
+
+/* 功能测试模块 */
+.test-modules {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20rpx;
+  padding: 30rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.1);
+}
+
+.modules-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 25rpx;
+  text-align: center;
+}
+
+.modules-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.module-card {
+  display: flex;
+  align-items: center;
+  background: white;
+  border-radius: 15rpx;
+  padding: 25rpx;
+  border: 2rpx solid #f0f0f0;
+  transition: all 0.3s;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
+}
+
+.module-card:active {
+  transform: scale(0.98);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.15);
+}
+
+.module-card.disabled {
+  opacity: 0.6;
+  background: #f8f8f8;
+}
+
+.module-icon {
+  font-size: 48rpx;
+  margin-right: 20rpx;
+  width: 80rpx;
+  text-align: center;
+}
+
+.module-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.module-name {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.module-desc {
+  font-size: 24rpx;
+  color: #666;
+  line-height: 1.4;
+}
+
+.module-status {
+  margin-left: 15rpx;
+}
+
+.need-login {
+  font-size: 22rpx;
+  color: #ff9500;
+  background: #fff3cd;
+  padding: 6rpx 12rpx;
+  border-radius: 6rpx;
+}
+
+.can-access {
+  font-size: 22rpx;
+  color: #007aff;
+  background: #e8f4ff;
+  padding: 6rpx 12rpx;
+  border-radius: 6rpx;
+}
+
+/* 快捷操作 */
+.quick-actions {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20rpx;
+  padding: 30rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.1);
+}
+
+.actions-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 25rpx;
+  text-align: center;
+}
+
+.actions-grid {
+  display: flex;
+  gap: 15rpx;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  flex: 1;
+  min-width: 200rpx;
+  background: white;
+  border: 1rpx solid #e0e0e0;
+  border-radius: 12rpx;
+  padding: 20rpx 15rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10rpx;
+  font-size: 24rpx;
+  color: #333;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.action-btn:active {
+  background: #f8f8f8;
+  transform: scale(0.95);
+}
+
+.action-icon {
+  font-size: 36rpx;
+}
+
+.action-text {
+  font-size: 24rpx;
+  color: #666;
+}
+
+/* 功能统计 */
+.feature-stats {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20rpx;
+  padding: 30rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.1);
+}
+
+.stats-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 25rpx;
+  text-align: center;
+}
+
+.stats-content {
+  display: flex;
+  justify-content: space-around;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.stat-number {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #007aff;
+}
+
+.stat-label {
+  font-size: 24rpx;
+  color: #666;
+}
+
+/* 底部说明 */
+.footer-info {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 15rpx;
+  padding: 25rpx;
+  text-align: center;
+  margin-bottom: 20rpx;
+}
+
+.footer-text {
+  font-size: 22rpx;
+  color: #999;
+  line-height: 1.6;
+  display: block;
+  margin-bottom: 5rpx;
+}
+
+.footer-text:last-child {
+  margin-bottom: 0;
+}

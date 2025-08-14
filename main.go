@@ -25,6 +25,13 @@ func main() {
 	controllers.InitMongoDB()
 	defer controllers.CloseMongoDB()
 
+	// 初始化微信支付客户端
+	err = controllers.InitWechatPayClient()
+	if err != nil {
+		log.Printf("Warning: 初始化微信支付客户端失败: %v", err)
+		log.Println("微信支付功能将不可用，但服务器将继续启动")
+	}
+
 	// 设置middleware中的数据库访问函数
 	middlewares.SetGetCollectionFunc(controllers.GetCollection)
 

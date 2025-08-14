@@ -1,0 +1,85 @@
+<view class="container">
+  <!-- 佣金统计 -->
+  <view class="summary-section" wx:if="{{summary}}">
+    <view class="summary-card">
+      <view class="summary-item">
+        <text class="summary-label">总佣金</text>
+        <text class="summary-amount">¥{{(summary.total_referral_commission || 0) + (summary.total_agent_commission || 0)}}</text>
+      </view>
+      <view class="summary-row">
+        <view class="summary-item small">
+          <text class="summary-label">本月</text>
+          <text class="summary-amount">¥{{summary.this_month_total || 0}}</text>
+        </view>
+        <view class="summary-item small">
+          <text class="summary-label">上月</text>
+          <text class="summary-amount">¥{{summary.last_month_total || 0}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 筛选器 -->
+  <view class="filter-section">
+    <view class="filter-item">
+      <text class="filter-label">状态：</text>
+      <picker 
+        bindchange="onStatusChange" 
+        value="{{selectedStatus}}" 
+        range="{{statusOptions}}"
+        range-key="label"
+      >
+        <view class="picker">
+          {{statusOptions[selectedStatus].label}}
+        </view>
+      </picker>
+    </view>
+    <view class="filter-item">
+      <text class="filter-label">类型：</text>
+      <picker 
+        bindchange="onTypeChange" 
+        value="{{selectedType}}" 
+        range="{{typeOptions}}"
+        range-key="label"
+      >
+        <view class="picker">
+          {{typeOptions[selectedType].label}}
+        </view>
+      </picker>
+    </view>
+  </view>
+
+  <!-- 佣金记录列表 -->
+  <view class="commission-list" wx:if="{{!loading && commissions.length > 0}}">
+    <view class="commission-item" wx:for="{{commissions}}" wx:key="_id">
+      <view class="item-header">
+        <text class="commission-id">{{item.commission_id}}</text>
+        <text class="commission-amount">¥{{item.amount}}</text>
+      </view>
+      <view class="item-content">
+        <text class="commission-desc">{{item.description}}</text>
+        <view class="commission-meta">
+          <text class="commission-type">{{item.type === 'referral' ? '推荐佣金' : '代理佣金'}}</text>
+          <text class="commission-status {{item.status}}">
+            {{item.status === 'pending' ? '待发放' : item.status === 'paid' ? '已发放' : '已取消'}}
+          </text>
+        </view>
+      </view>
+      <view class="item-footer">
+        <text class="commission-date">{{item.date}}</text>
+        <text class="order-id" wx:if="{{item.order_id}}">订单：{{item.order_id}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{!loading && commissions.length === 0}}">
+    <image class="empty-icon" src="/images/empty.png"></image>
+    <text class="empty-text">暂无佣金记录</text>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+</view>

@@ -1,0 +1,129 @@
+<view class="container">
+  <!-- 我的推荐信息 -->
+  <view class="my-referral-section" wx:if="{{!loading && userReferralInfo}}">
+    <view class="section-title">我的推荐信息</view>
+    <view class="referral-card">
+      <view class="card-header">
+        <text class="card-title">我的推荐码</text>
+        <button class="copy-btn" bindtap="copyReferralCode" size="mini">复制</button>
+      </view>
+      <view class="referral-code">{{userReferralInfo.referral_code}}</view>
+      <view class="referral-stats">
+        <view class="stat-item">
+          <text class="stat-number">{{userReferralInfo.total_referrals}}</text>
+          <text class="stat-label">总推荐人数</text>
+        </view>
+        <view class="stat-item">
+          <text class="stat-number">{{userReferralInfo.successful_referrals}}</text>
+          <text class="stat-label">成功推荐</text>
+        </view>
+        <view class="stat-item">
+          <text class="stat-number">¥{{userReferralInfo.total_commission}}</text>
+          <text class="stat-label">总佣金</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 验证推荐码 -->
+  <view class="validate-section">
+    <view class="section-title">验证推荐码</view>
+    <view class="referral-input-container">
+      <view class="input-label">请输入推荐码</view>
+      <view class="input-wrapper">
+        <input 
+          class="referral-input" 
+          placeholder="请输入6位推荐码" 
+          value="{{referralCode}}"
+          bindinput="onReferralCodeInput"
+          maxlength="20"
+          type="text"
+        />
+      </view>
+    </view>
+    <view class="button-group">
+      <button 
+        class="validate-btn primary" 
+        bindtap="validateReferralCode"
+        loading="{{validating}}"
+        disabled="{{validating || !referralCode}}"
+      >
+        验证
+      </button>
+      <button 
+        class="validate-btn secondary" 
+        bindtap="bindReferral"
+        disabled="{{!referralCode || !validateResult || validateResult.code !== 200}}"
+      >
+        使用推荐码
+      </button>
+    </view>
+    
+    <!-- 验证结果 -->
+    <view class="validate-result" wx:if="{{validateResult}}">
+      <view class="result-card {{validateResult.code === 200 ? 'success' : 'error'}}">
+        <view class="result-title">{{validateResult.message}}</view>
+        <view class="result-content" wx:if="{{validateResult.code === 200 && validateResult.data}}">
+          <view class="referrer-info">
+            <text class="info-label">推荐人：</text>
+            <text class="info-value">{{validateResult.data.referrer_info.user_name}}</text>
+          </view>
+          <view class="referrer-info">
+            <text class="info-label">学校：</text>
+            <text class="info-value">{{validateResult.data.referrer_info.school}}</text>
+          </view>
+          <view class="referrer-info">
+            <text class="info-label">折扣率：</text>
+            <text class="info-value">{{validateResult.data.discount_rate * 100}}%</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 价格模拟 -->
+  <view class="validate-section">
+    <view class="section-title">价格模拟（基于折扣率）</view>
+    <view class="input-group">
+      <input class="referral-input" placeholder="输入商品原价" value="{{basePrice}}" bindinput="onBasePriceInput" />
+      <button class="validate-btn" bindtap="simulatePrice">计算价格</button>
+    </view>
+    <view class="validate-result" wx:if="{{finalPrice}}">
+      <view class="result-card success">
+        <view class="result-title">计算结果</view>
+        <view class="result-content">
+          <view class="referrer-info">
+            <text class="info-label">折扣率：</text>
+            <text class="info-value">{{(discountRate || 0) * 100}}%</text>
+          </view>
+          <view class="referrer-info">
+            <text class="info-label">折后价：</text>
+            <text class="info-value">¥{{finalPrice}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 最近推荐记录 -->
+  <view class="recent-referrals" wx:if="{{userReferralInfo && userReferralInfo.recent_referrals.length > 0}}">
+    <view class="section-title">最近推荐记录</view>
+    <view class="referral-list">
+      <view class="referral-item" wx:for="{{userReferralInfo.recent_referrals}}" wx:key="index">
+        <view class="item-left">
+          <text class="user-name">{{item.referred_user}}</text>
+          <text class="referral-date">{{item.referral_date}}</text>
+        </view>
+        <view class="item-right">
+          <text class="commission">¥{{item.commission_earned}}</text>
+          <text class="status {{item.status}}">{{item.status}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+</view>

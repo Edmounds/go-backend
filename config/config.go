@@ -12,9 +12,12 @@ type Config struct {
 	Environment string
 
 	// 微信小程序配置
-	WechatAppID     string
-	WechatAppSecret string
-	WechatAPIURL    string
+	WechatMchID                      string
+	WechatMchCertificateSerialNumber string
+	WechatMchAPIv3Key                string
+	WechatAppID                      string
+	WechatAppSecret                  string
+	WechatAPIURL                     string
 
 	// 数据库配置
 	MongoDBURL string
@@ -32,9 +35,12 @@ func GetConfig() *Config {
 		Environment: getEnv("ENVIRONMENT", "development"),
 
 		// 微信小程序配置
-		WechatAppID:     getEnv("WECHAT_APP_ID", ""),
-		WechatAppSecret: getEnv("WECHAT_APP_SECRET", ""),
-		WechatAPIURL:    getEnv("WECHAT_API_URL", "https://api.weixin.qq.com"),
+		WechatMchID:                      getEnv("WECHAT_MCH_ID", ""),
+		WechatMchCertificateSerialNumber: getEnv("WECHAT_MCH_CERTIFICATE_SERIAL_NUMBER", ""),
+		WechatMchAPIv3Key:                getEnv("WECHAT_MCH_API_V3_KEY", ""),
+		WechatAppID:                      getEnv("WECHAT_APP_ID", ""),
+		WechatAppSecret:                  getEnv("WECHAT_APP_SECRET", ""),
+		WechatAPIURL:                     getEnv("WECHAT_API_URL", "https://api.weixin.qq.com"),
 
 		// 数据库配置
 		MongoDBURL: getEnv("MONGODB_URL", "mongodb://localhost:27017"),

@@ -1,0 +1,58 @@
+{
+  "pages": [
+    "pages/profile/profile",
+    "pages/login/login",
+    "pages/referral/referral",
+    "pages/commission/commission",
+    "pages/learning/learning",
+    "pages/wordcard/wordcard",
+    "pages/store/store",
+    "pages/agent/agent",
+    "pages/admin/admin",
+    "pages/qrcode/qrcode",
+    "pages/index/index",
+    "pages/logs/logs"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#007aff",
+    "navigationBarTitleTextColor": "#fff",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f8f8f8"
+  },
+  "tabBar": {
+    "color": "#999",
+    "selectedColor": "#007aff",
+    "backgroundColor": "#fff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "首页",
+        "iconPath": "images/home.png",
+        "selectedIconPath": "images/home-active.png"
+      },
+      {
+        "pagePath": "pages/referral/referral",
+        "text": "推荐",
+        "iconPath": "images/referral.png",
+        "selectedIconPath": "images/referral-active.png"
+      },
+      {
+        "pagePath": "pages/commission/commission",
+        "text": "佣金",
+        "iconPath": "images/commission.png",
+        "selectedIconPath": "images/commission-active.png"
+      }
+    ]
+  },
+  "permission": {
+    "scope.userInfo": {
+      "desc": "用于完善用户资料"
+    }
+  },
+  "style": "v2",
+  "componentFramework": "glass-easel",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

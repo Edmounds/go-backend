@@ -1,0 +1,189 @@
+<!--pages/store/store.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="title">商店测试</text>
+    <view class="nav-buttons">
+      <button class="nav-btn" bindtap="loadProducts" size="mini">商品列表</button>
+      <button class="nav-btn" bindtap="switchToOrders" size="mini">我的订单</button>
+    </view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading">
+    <text>加载中...</text>
+  </view>
+
+  <!-- 商品列表 -->
+  <view class="section" wx:if="{{products.length > 0}}">
+    <view class="section-title">商品列表 ({{products.length}})</view>
+    <view class="products-grid">
+      <view class="product-item" wx:for="{{products}}" wx:key="_id">
+        <view class="product-image" wx:if="{{item.images && item.images.length > 0}}">
+          <image src="{{item.images[0]}}" mode="aspectFill" lazy-load />
+        </view>
+        <view class="product-info">
+          <text class="product-name">{{item.name}}</text>
+          <text class="product-description">{{item.description}}</text>
+          <view class="product-meta">
+            <text class="product-price">¥{{item.price}}</text>
+            <text class="product-stock">库存: {{item.stock}}</text>
+          </view>
+        </view>
+        <view class="product-actions">
+          <button 
+            class="view-btn" 
+            size="mini" 
+            bindtap="viewProduct" 
+            data-product-id="{{item.product_id}}"
+          >
+            查看详情
+          </button>
+          <view class="cart-controls">
+            <button 
+              class="cart-btn decrease" 
+              size="mini" 
+              bindtap="updateCartItem"
+              data-product-id="{{item.product_id}}"
+              data-action="decrease"
+              wx:if="{{getCartQuantity(item.product_id) > 0}}"
+            >
+              -
+            </button>
+            <text class="cart-quantity" wx:if="{{getCartQuantity(item.product_id) > 0}}">
+              {{getCartQuantity(item.product_id)}}
+            </text>
+            <button 
+              class="cart-btn add" 
+              size="mini" 
+              bindtap="{{getCartQuantity(item.product_id) > 0 ? 'updateCartItem' : 'addToCart'}}"
+              data-product-id="{{item.product_id}}"
+              data-product-name="{{item.name}}"
+              data-product-price="{{item.price}}"
+              data-action="increase"
+            >
+              {{getCartQuantity(item.product_id) > 0 ? '+' : '加入购物车'}}
+            </button>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 选中商品详情 -->
+  <view class="section" wx:if="{{selectedProduct}}">
+    <view class="section-title">商品详情</view>
+    <view class="product-detail">
+      <view class="detail-images" wx:if="{{selectedProduct.images && selectedProduct.images.length > 0}}">
+        <image 
+          wx:for="{{selectedProduct.images}}" 
+          wx:key="*this"
+          src="{{item}}" 
+          mode="aspectFit"
+          class="detail-image"
+        />
+      </view>
+      <view class="detail-info">
+        <text class="detail-name">{{selectedProduct.name}}</text>
+        <text class="detail-description">{{selectedProduct.description}}</text>
+        <view class="detail-meta">
+          <text class="detail-price">价格: ¥{{selectedProduct.price}}</text>
+          <text class="detail-stock">库存: {{selectedProduct.stock}}</text>
+          <text class="detail-id">商品ID: {{selectedProduct.product_id}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 购物车 -->
+  <view class="section" wx:if="{{Object.keys(cartItems).length > 0}}">
+    <view class="section-title">购物车 ({{Object.keys(cartItems).length}}件商品)</view>
+    <view class="cart-items">
+      <view class="cart-item" wx:for="{{cartItems}}" wx:key="*this" wx:for-item="quantity" wx:for-index="productId">
+        <text class="cart-product">商品ID: {{productId}}</text>
+        <text class="cart-quantity">数量: {{quantity}}</text>
+        <button 
+          class="remove-btn" 
+          size="mini" 
+          bindtap="removeFromCart" 
+          data-product-id="{{productId}}"
+        >
+          删除
+        </button>
+      </view>
+    </view>
+    <button class="create-order-btn" bindtap="showCreateOrder">创建订单</button>
+  </view>
+
+  <!-- 订单创建表单 -->
+  <view class="modal" wx:if="{{showOrderForm}}">
+    <view class="modal-content">
+      <view class="modal-header">
+        <text class="modal-title">创建订单</text>
+        <text class="modal-close" bindtap="hideOrderForm">×</text>
+      </view>
+      <view class="modal-body">
+        <view class="form-item">
+          <text class="form-label">收货地址ID：</text>
+          <input 
+            class="form-input" 
+            value="{{orderData.address_id}}"
+            placeholder="请输入收货地址ID"
+            bindinput="onAddressIdInput"
+          />
+        </view>
+        <view class="form-item">
+          <text class="form-label">支付方式：</text>
+          <input 
+            class="form-input" 
+            value="{{orderData.payment_method}}"
+            placeholder="请输入支付方式 (如: wechat)"
+            bindinput="onPaymentMethodInput"
+          />
+        </view>
+        <view class="form-item">
+          <text class="form-label">推荐码 (可选)：</text>
+          <input 
+            class="form-input" 
+            value="{{orderData.referral_code}}"
+            placeholder="请输入推荐码"
+            bindinput="onReferralCodeInput"
+          />
+        </view>
+      </view>
+      <view class="modal-footer">
+        <button class="modal-btn cancel" bindtap="hideOrderForm">取消</button>
+        <button class="modal-btn confirm" bindtap="createOrder">创建订单</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 订单列表 -->
+  <view class="section" wx:if="{{orders.length > 0}}">
+    <view class="section-title">
+      订单列表 ({{orders.length}})
+      <picker range="{{statusOptions}}" range-key="label" bindchange="onOrderStatusChange">
+        <view class="status-picker">{{statusOptions[0].label}}</view>
+      </picker>
+    </view>
+    <view class="orders-list">
+      <view class="order-item" wx:for="{{orders}}" wx:key="_id">
+        <view class="order-header">
+          <text class="order-id">订单ID: {{item._id}}</text>
+          <text class="order-status">{{item.status}}</text>
+        </view>
+        <view class="order-info">
+          <text class="order-amount">总金额: ¥{{item.total_amount}}</text>
+          <text class="order-date">创建时间: {{formatDate(item.created_at)}}</text>
+        </view>
+        <view class="order-items">
+          <text class="order-items-title">商品清单:</text>
+          <view class="order-item-list">
+            <text class="order-item-detail" wx:for="{{item.items}}" wx:key="product_id" wx:for-item="orderItem">
+              {{orderItem.product_id}} x{{orderItem.quantity}} (¥{{orderItem.price}})
+            </text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,139 @@
+<!--pages/admin/admin.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="title">管理员功能测试</text>
+    <text class="subtitle">用户代理等级管理</text>
+  </view>
+
+  <!-- 预设测试用户 -->
+  <view class="section">
+    <view class="section-title">预设测试用户</view>
+    <view class="preset-users">
+      <view 
+        class="user-card" 
+        wx:for="{{testUsers}}" 
+        wx:key="openID"
+        bindtap="usePresetUser"
+        data-user="{{item}}"
+      >
+        <view class="user-info">
+          <text class="user-name">{{item.name}}</text>
+          <text class="user-school">{{item.school}}</text>
+        </view>
+        <view class="user-meta">
+          <text class="user-id" bindtap="copyUserId" data-user-id="{{item.openID}}">
+            ID: {{item.openID}}
+          </text>
+          <text class="user-level">{{getAgentLevelText(item.currentLevel)}}</text>
+        </view>
+        <view class="user-action">
+          <text class="tap-hint">点击使用</text>
+        </view>
+      </view>
+    </view>
+    <button class="batch-test-btn" bindtap="batchTest" size="mini">批量测试</button>
+  </view>
+
+  <!-- 更新表单 -->
+  <view class="section">
+    <view class="section-title">更新代理等级</view>
+    <view class="update-form">
+      <view class="form-item">
+        <text class="form-label">用户ID (OpenID)：</text>
+        <input 
+          class="form-input" 
+          value="{{testUserId}}"
+          placeholder="请输入用户的OpenID"
+          bindinput="onUserIdInput"
+        />
+      </view>
+      
+      <view class="form-item">
+        <text class="form-label">代理等级：</text>
+        <picker range="{{agentLevels}}" range-key="label" value="{{agentLevel}}" bindchange="onAgentLevelChange">
+          <view class="form-picker">
+            {{agentLevels[agentLevel].label}}
+          </view>
+        </picker>
+      </view>
+      
+      <view class="form-actions">
+        <button 
+          class="update-btn" 
+          bindtap="updateAgentLevel" 
+          disabled="{{loading}}"
+        >
+          {{loading ? '更新中...' : '更新等级'}}
+        </button>
+        <button class="clear-btn" bindtap="clearForm" size="mini">清空表单</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 更新结果 -->
+  <view class="section" wx:if="{{updateResult}}">
+    <view class="section-title">更新结果</view>
+    <view class="result-card {{updateResult.success ? 'success' : 'error'}}">
+      <view class="result-header">
+        <text class="result-status">{{updateResult.success ? '✓ 成功' : '✗ 失败'}}</text>
+        <text class="result-time">{{updateResult.timestamp}}</text>
+      </view>
+      <view class="result-message">{{updateResult.message}}</view>
+      <view class="result-data" wx:if="{{updateResult.success && updateResult.data}}">
+        <text class="data-title">返回数据：</text>
+        <view class="data-content">
+          <text class="data-item">用户ID: {{updateResult.data.openID}}</text>
+          <text class="data-item">代理等级: {{updateResult.data.agent_level}}</text>
+          <text class="data-item">是否代理: {{updateResult.data.is_agent ? '是' : '否'}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 操作日志 -->
+  <view class="section" wx:if="{{operationLog.length > 0}}">
+    <view class="section-title">
+      操作日志 ({{operationLog.length}})
+      <button class="clear-log-btn" bindtap="clearOperationLog" size="mini">清空日志</button>
+    </view>
+    <view class="operation-log">
+      <view class="log-item" wx:for="{{operationLog}}" wx:key="timestamp">
+        <view class="log-header">
+          <text class="log-action">{{item.action}}</text>
+          <text class="log-time">{{item.timestamp}}</text>
+        </view>
+        <view class="log-content">
+          <text class="log-detail">用户: {{item.userId}}</text>
+          <text class="log-detail">等级: {{getAgentLevelText(item.level)}}</text>
+          <text class="log-result {{item.result.includes('成功') ? 'success' : 'error'}}">
+            {{item.result}}
+          </text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 功能说明 -->
+  <view class="section">
+    <view class="section-title">功能说明</view>
+    <view class="help-content">
+      <view class="help-item">
+        <text class="help-title">代理等级说明：</text>
+        <text class="help-desc">0=普通用户，1=校代理，2=区域代理</text>
+      </view>
+      <view class="help-item">
+        <text class="help-title">测试步骤：</text>
+        <text class="help-desc">1. 选择预设用户或手动输入用户ID</text>
+        <text class="help-desc">2. 选择要设置的代理等级</text>
+        <text class="help-desc">3. 点击更新等级按钮</text>
+        <text class="help-desc">4. 查看更新结果和操作日志</text>
+      </view>
+      <view class="help-item">
+        <text class="help-title">注意事项：</text>
+        <text class="help-desc">• 需要管理员权限才能更新用户等级</text>
+        <text class="help-desc">• 用户ID必须是有效的OpenID</text>
+        <text class="help-desc">• 批量测试会依次更新所有预设用户</text>
+      </view>
+    </view>
+  </view>
+</view>

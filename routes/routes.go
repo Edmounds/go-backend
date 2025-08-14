@@ -39,40 +39,47 @@ func SetupRoutes(r *gin.Engine) {
 			protected.POST("/auth/refresh", middlewares.RefreshTokenMiddleware())
 
 			// 用户管理路由
+			protected.GET("/users/:user_id", controllers.GetUserHandler())
 			protected.PUT("/users/:user_id", controllers.UpdateUserHandler())
-			protected.PUT("/users/:user_id/agent", controllers.UpdateAgentHandler())
-			protected.POST("/users/:user_id/address", controllers.CreateAddressHandler())
-			protected.DELETE("/:user_id/address/:address_id", controllers.DeleteAddressHandler())
 
-			// 商城相关路由
-			protected.POST("/users/:user_id/cart", controllers.AddToCartHandler())
-			protected.PUT("/users/:user_id/cart/items/:product_id", controllers.UpdateCartItemHandler())
-			protected.DELETE("/users/:user_id/cart/items/:product_id", controllers.DeleteCartItemHandler())
-			protected.POST("/users/:user_id/orders", controllers.CreateOrderHandler())
-			protected.GET("/users/:user_id/orders", controllers.GetOrdersHandler())
+			// 管理员路由
+			protected.PUT("/admin/users/:user_id/agent-level", controllers.UpdateAgentLevelHandler())
 
 			// 学习进度相关路由
 			protected.GET("/users/:user_id/progress", controllers.GetProgressHandler())
 			protected.PUT("/users/:user_id/progress", controllers.UpdateProgressHandler())
 			protected.GET("/books/:book_id/words", controllers.GetBookWordsHandler())
 
+			// 单词卡片相关路由
+			protected.GET("/units/:unit_id/words", controllers.GetUnitWordsHandler())
+			protected.GET("/words/:word_name/card", controllers.GetWordCardHandler())
+			protected.GET("/words", controllers.GetWordsByUnitNameHandler()) // 通过查询参数获取单词
+
 			// 推荐系统相关路由
 			protected.GET("/users/:user_id/referral", controllers.GetReferralInfoHandler())
 			protected.POST("/referrals", controllers.TrackReferralHandler())
 			protected.GET("/users/:user_id/referral/commissions", controllers.GetCommissionsHandler())
+			// 微信小程序码相关路由（服务端代理获取不限制小程序码）
+			protected.POST("/wxacode/unlimited", controllers.GenerateUnlimitedQRCodeHandler())
 
 			// 代理系统相关路由
 			protected.GET("/agents/:user_id/users", controllers.GetAgentUsersHandler())
 			protected.GET("/agents/:user_id/sales", controllers.GetAgentSalesHandler())
 			protected.POST("/agents/:user_id/withdraw", controllers.WithdrawCommissionHandler())
+
+			// 商城相关路由（简化，只保留必要的）
+			protected.POST("/users/:user_id/cart", controllers.AddToCartHandler())
+			protected.POST("/users/:user_id/orders", controllers.CreateOrderHandler())
+			protected.GET("/users/:user_id/orders", controllers.GetOrdersHandler())
+
+			// 微信支付相关路由
+			protected.POST("/users/:user_id/orders/pay", controllers.CreateWechatPayOrderHandler())
 		}
+
+		// 微信支付回调路由（不需要JWT认证）
+		v1.POST("/wechat/pay/notify", controllers.WechatPayNotifyHandler())
 	}
 
 	// 健康检查
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status":  "ok",
-			"message": "服务运行正常",
-		})
-	})
+	r.GET("/health", controllers.HealthCheckHandler())
 }

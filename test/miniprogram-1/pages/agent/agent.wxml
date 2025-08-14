@@ -1,0 +1,218 @@
+<!--pages/agent/agent.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="title">代理管理测试</text>
+  </view>
+
+  <!-- 标签页导航 -->
+  <view class="tab-nav">
+    <view 
+      class="tab-item {{currentTab === index ? 'active' : ''}}"
+      wx:for="{{tabList}}" 
+      wx:key="*this"
+      bindtap="switchTab"
+      data-tab="{{index}}"
+    >
+      {{item}}
+    </view>
+  </view>
+
+  <!-- 用户管理 -->
+  <view wx:if="{{currentTab === 0}}">
+    <!-- 筛选条件 -->
+    <view class="section">
+      <view class="section-title">筛选条件</view>
+      <view class="filter-form">
+        <view class="filter-row">
+          <input 
+            class="filter-input" 
+            value="{{filters.school}}"
+            placeholder="学校名称"
+            bindinput="onSchoolInput"
+          />
+          <input 
+            class="filter-input" 
+            value="{{filters.region}}"
+            placeholder="地区"
+            bindinput="onRegionInput"
+          />
+        </view>
+        <view class="filter-actions">
+          <button class="filter-btn" bindtap="applyFilters" size="mini">应用筛选</button>
+          <button class="filter-btn clear" bindtap="clearFilters" size="mini">清空</button>
+        </view>
+      </view>
+    </view>
+
+    <!-- 用户列表 -->
+    <view class="section">
+      <view class="section-title">管理的用户 ({{agentUsers.length}})</view>
+      <view wx:if="{{loading}}" class="loading">加载中...</view>
+      <view wx:elif="{{agentUsers.length === 0}}" class="empty">暂无数据</view>
+      <view wx:else class="users-list">
+        <view class="user-item" wx:for="{{agentUsers}}" wx:key="openID">
+          <view class="user-info">
+            <text class="user-name">{{item.user_name || '未设置'}}</text>
+            <text class="user-school">{{item.school || '未设置'}}</text>
+            <text class="user-city">{{item.city || '未设置'}}</text>
+          </view>
+          <view class="user-meta">
+            <text class="user-orders">订单: {{item.total_orders}}</text>
+            <text class="user-spent">消费: ¥{{item.total_spent}}</text>
+            <text class="user-type">{{item.agent_type}}</text>
+          </view>
+          <view class="user-id">OpenID: {{item.openID}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 销售数据 -->
+  <view wx:if="{{currentTab === 1}}">
+    <!-- 日期筛选 -->
+    <view class="section">
+      <view class="section-title">日期筛选</view>
+      <view class="date-filter">
+        <view class="date-item">
+          <text class="date-label">开始日期：</text>
+          <picker mode="date" value="{{filters.startDate}}" bindchange="onStartDateChange">
+            <view class="date-picker">{{filters.startDate || '选择日期'}}</view>
+          </picker>
+        </view>
+        <view class="date-item">
+          <text class="date-label">结束日期：</text>
+          <picker mode="date" value="{{filters.endDate}}" bindchange="onEndDateChange">
+            <view class="date-picker">{{filters.endDate || '选择日期'}}</view>
+          </picker>
+        </view>
+        <button class="filter-btn" bindtap="applyFilters" size="mini">应用筛选</button>
+      </view>
+    </view>
+
+    <!-- 销售摘要 -->
+    <view class="section" wx:if="{{salesData && salesData.sales_summary}}">
+      <view class="section-title">销售摘要</view>
+      <view class="sales-summary">
+        <view class="summary-item">
+          <text class="summary-label">总销售额</text>
+          <text class="summary-value">¥{{salesData.sales_summary.total_sales}}</text>
+        </view>
+        <view class="summary-item">
+          <text class="summary-label">总订单数</text>
+          <text class="summary-value">{{salesData.sales_summary.total_orders}}</text>
+        </view>
+        <view class="summary-item">
+          <text class="summary-label">总佣金</text>
+          <text class="summary-value">¥{{salesData.sales_summary.total_commission}}</text>
+        </view>
+        <view class="summary-period">
+          统计期间: {{salesData.sales_summary.period.start_date}} 至 {{salesData.sales_summary.period.end_date}}
+        </view>
+      </view>
+    </view>
+
+    <!-- 产品销售数据 -->
+    <view class="section" wx:if="{{salesData && salesData.sales_by_product}}">
+      <view class="section-title">产品销售排行</view>
+      <view class="product-sales">
+        <view class="product-item" wx:for="{{salesData.sales_by_product}}" wx:key="product_id">
+          <view class="product-info">
+            <text class="product-name">{{item.product_name}}</text>
+            <text class="product-id">ID: {{item.product_id}}</text>
+          </view>
+          <view class="product-stats">
+            <text class="product-quantity">销量: {{item.quantity_sold}}</text>
+            <text class="product-revenue">收入: ¥{{item.total_revenue}}</text>
+            <text class="product-commission">佣金: ¥{{item.commission}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 月度趋势 -->
+    <view class="section" wx:if="{{salesData && salesData.monthly_trend}}">
+      <view class="section-title">月度趋势</view>
+      <view class="monthly-trend">
+        <view class="trend-item" wx:for="{{salesData.monthly_trend}}" wx:key="month">
+          <text class="trend-month">{{item.month}}</text>
+          <text class="trend-sales">销售: ¥{{item.sales}}</text>
+          <text class="trend-orders">订单: {{item.orders}}</text>
+          <text class="trend-commission">佣金: ¥{{item.commission}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 佣金提取 -->
+  <view wx:if="{{currentTab === 2}}">
+    <!-- 提现表单 -->
+    <view class="section">
+      <view class="section-title">申请提现</view>
+      <view class="withdraw-form">
+        <view class="form-item">
+          <text class="form-label">提现金额：</text>
+          <input 
+            class="form-input" 
+            type="digit"
+            value="{{withdrawForm.amount}}"
+            placeholder="请输入提现金额"
+            bindinput="onWithdrawAmountInput"
+          />
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">提现方式：</text>
+          <picker range="{{withdrawMethods}}" range-key="label" bindchange="onWithdrawMethodChange">
+            <view class="form-picker">
+              {{withdrawMethods[0].label}}
+            </view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">账户姓名：</text>
+          <input 
+            class="form-input" 
+            value="{{withdrawForm.accountInfo.accountName}}"
+            placeholder="请输入账户姓名"
+            bindinput="onAccountNameInput"
+          />
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">账户号码：</text>
+          <input 
+            class="form-input" 
+            value="{{withdrawForm.accountInfo.accountNumber}}"
+            placeholder="请输入账户号码"
+            bindinput="onAccountNumberInput"
+          />
+        </view>
+        
+        <button class="submit-btn" bindtap="submitWithdraw">提交申请</button>
+      </view>
+    </view>
+
+    <!-- 提现历史 -->
+    <view class="section">
+      <view class="section-title">提现历史</view>
+      <view wx:if="{{withdrawHistory.length === 0}}" class="empty">暂无提现记录</view>
+      <view wx:else class="withdraw-history">
+        <view class="history-item" wx:for="{{withdrawHistory}}" wx:key="id">
+          <view class="history-header">
+            <text class="history-id">{{item.id}}</text>
+            <text class="history-status {{item.status}}">{{getStatusText(item.status)}}</text>
+          </view>
+          <view class="history-info">
+            <text class="history-amount">¥{{item.amount}}</text>
+            <text class="history-method">{{item.method}}</text>
+            <text class="history-date">{{item.createdAt}}</text>
+          </view>
+          <view class="history-completed" wx:if="{{item.completedAt}}">
+            完成时间: {{item.completedAt}}
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,336 @@
+/* pages/admin/admin.wxss */
+.container {
+  padding: 20rpx;
+  background-color: #f8f8f8;
+  min-height: 100vh;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 30rpx;
+}
+
+.title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10rpx;
+  display: block;
+}
+
+.subtitle {
+  font-size: 24rpx;
+  color: #666;
+}
+
+.section {
+  background: white;
+  border-radius: 10rpx;
+  margin-bottom: 20rpx;
+  padding: 30rpx;
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+  border-left: 4rpx solid #007aff;
+  padding-left: 10rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.clear-log-btn {
+  background: #ff3b30;
+  color: white;
+}
+
+/* 预设用户 */
+.preset-users {
+  display: flex;
+  flex-direction: column;
+  gap: 15rpx;
+  margin-bottom: 20rpx;
+}
+
+.user-card {
+  border: 2rpx solid #e0e0e0;
+  border-radius: 10rpx;
+  padding: 20rpx;
+  background: #fafafa;
+  transition: all 0.3s;
+}
+
+.user-card:active {
+  background: #f0f7ff;
+  border-color: #007aff;
+}
+
+.user-info {
+  margin-bottom: 10rpx;
+}
+
+.user-name {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-right: 20rpx;
+}
+
+.user-school {
+  font-size: 24rpx;
+  color: #666;
+}
+
+.user-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10rpx;
+}
+
+.user-id {
+  font-size: 22rpx;
+  color: #999;
+  flex: 1;
+  word-break: break-all;
+}
+
+.user-level {
+  background: #007aff;
+  color: white;
+  padding: 6rpx 12rpx;
+  border-radius: 6rpx;
+  font-size: 22rpx;
+}
+
+.user-action {
+  text-align: center;
+}
+
+.tap-hint {
+  font-size: 24rpx;
+  color: #007aff;
+}
+
+.batch-test-btn {
+  background: #ff9500;
+  color: white;
+  width: 100%;
+}
+
+/* 更新表单 */
+.update-form {
+  display: flex;
+  flex-direction: column;
+  gap: 25rpx;
+}
+
+.form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+
+.form-label {
+  font-size: 26rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.form-input {
+  border: 1rpx solid #ddd;
+  border-radius: 6rpx;
+  padding: 15rpx;
+  font-size: 26rpx;
+  background: white;
+}
+
+.form-picker {
+  border: 1rpx solid #ddd;
+  border-radius: 6rpx;
+  padding: 15rpx;
+  font-size: 26rpx;
+  color: #333;
+  background: white;
+}
+
+.form-actions {
+  display: flex;
+  gap: 20rpx;
+  align-items: center;
+  margin-top: 10rpx;
+}
+
+.update-btn {
+  background: #007aff;
+  color: white;
+  flex: 1;
+}
+
+.update-btn[disabled] {
+  background: #ccc;
+}
+
+.clear-btn {
+  background: #999;
+  color: white;
+}
+
+/* 结果卡片 */
+.result-card {
+  border-radius: 10rpx;
+  padding: 25rpx;
+  border: 2rpx solid;
+}
+
+.result-card.success {
+  background: #f0fff4;
+  border-color: #34c759;
+}
+
+.result-card.error {
+  background: #fff5f5;
+  border-color: #ff3b30;
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15rpx;
+}
+
+.result-status {
+  font-size: 28rpx;
+  font-weight: bold;
+}
+
+.result-card.success .result-status {
+  color: #34c759;
+}
+
+.result-card.error .result-status {
+  color: #ff3b30;
+}
+
+.result-time {
+  font-size: 22rpx;
+  color: #999;
+}
+
+.result-message {
+  font-size: 26rpx;
+  color: #333;
+  margin-bottom: 15rpx;
+}
+
+.result-data {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 6rpx;
+  padding: 15rpx;
+}
+
+.data-title {
+  font-size: 24rpx;
+  color: #666;
+  font-weight: bold;
+  margin-bottom: 10rpx;
+  display: block;
+}
+
+.data-content {
+  display: flex;
+  flex-direction: column;
+  gap: 5rpx;
+}
+
+.data-item {
+  font-size: 24rpx;
+  color: #333;
+}
+
+/* 操作日志 */
+.operation-log {
+  max-height: 500rpx;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 15rpx;
+}
+
+.log-item {
+  background: #f9f9f9;
+  border-radius: 8rpx;
+  padding: 20rpx;
+  border-left: 4rpx solid #007aff;
+}
+
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10rpx;
+}
+
+.log-action {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.log-time {
+  font-size: 22rpx;
+  color: #999;
+}
+
+.log-content {
+  display: flex;
+  flex-direction: column;
+  gap: 5rpx;
+}
+
+.log-detail {
+  font-size: 24rpx;
+  color: #666;
+}
+
+.log-result {
+  font-size: 24rpx;
+  font-weight: bold;
+}
+
+.log-result.success {
+  color: #34c759;
+}
+
+.log-result.error {
+  color: #ff3b30;
+}
+
+/* 帮助内容 */
+.help-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.help-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+
+.help-title {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.help-desc {
+  font-size: 24rpx;
+  color: #666;
+  line-height: 1.5;
+  padding-left: 15rpx;
+}

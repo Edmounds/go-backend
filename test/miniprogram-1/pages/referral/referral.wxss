@@ -1,0 +1,305 @@
+.container {
+  padding: 20rpx;
+  background-color: #f8f8f8;
+  min-height: 100vh;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+  margin-top: 30rpx;
+}
+
+.section-title:first-child {
+  margin-top: 0;
+}
+
+/* 我的推荐信息 */
+.my-referral-section {
+  margin-bottom: 40rpx;
+}
+
+.referral-card {
+  background: white;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.card-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.copy-btn {
+  background: #007aff;
+  color: white;
+  border-radius: 20rpx;
+  padding: 10rpx 20rpx;
+  font-size: 24rpx;
+}
+
+.referral-code {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #007aff;
+  text-align: center;
+  padding: 20rpx;
+  background: #f0f8ff;
+  border-radius: 12rpx;
+  margin-bottom: 30rpx;
+  letter-spacing: 4rpx;
+}
+
+.referral-stats {
+  display: flex;
+  justify-content: space-around;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-number {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8rpx;
+}
+
+.stat-label {
+  font-size: 24rpx;
+  color: #666;
+}
+
+/* 验证推荐码 */
+.validate-section {
+  margin-bottom: 40rpx;
+}
+
+.referral-input-container {
+  background: white;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
+}
+
+.input-label {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+  margin-bottom: 20rpx;
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.referral-input {
+  width: 100%;
+  height: 88rpx;
+  padding: 0 24rpx;
+  background: #f8f9fa;
+  border-radius: 12rpx;
+  border: 2rpx solid #e9ecef;
+  font-size: 32rpx;
+  color: #333;
+  box-sizing: border-box;
+}
+
+.referral-input:focus {
+  border-color: #007aff;
+  background: white;
+}
+
+.button-group {
+  display: flex;
+  gap: 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.validate-btn {
+  flex: 1;
+  height: 88rpx;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+}
+
+.validate-btn.primary {
+  background: #007aff;
+  color: white;
+}
+
+.validate-btn.secondary {
+  background: #28a745;
+  color: white;
+}
+
+.validate-btn[disabled] {
+  background: #e9ecef !important;
+  color: #6c757d !important;
+}
+
+.validate-btn.primary[disabled] {
+  background: #e9ecef !important;
+}
+
+.validate-btn.secondary[disabled] {
+  background: #e9ecef !important;
+}
+
+/* 验证结果 */
+.validate-result {
+  margin-top: 20rpx;
+}
+
+.result-card {
+  padding: 20rpx;
+  border-radius: 12rpx;
+  background: white;
+}
+
+.result-card.success {
+  border-left: 6rpx solid #4cd964;
+  background: #f0fff4;
+}
+
+.result-card.error {
+  border-left: 6rpx solid #ff3b30;
+  background: #fff5f5;
+}
+
+.result-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  margin-bottom: 16rpx;
+}
+
+.result-card.success .result-title {
+  color: #4cd964;
+}
+
+.result-card.error .result-title {
+  color: #ff3b30;
+}
+
+.result-content {
+  padding-left: 20rpx;
+}
+
+.referrer-info {
+  display: flex;
+  margin-bottom: 12rpx;
+}
+
+.info-label {
+  font-size: 26rpx;
+  color: #666;
+  width: 120rpx;
+}
+
+.info-value {
+  font-size: 26rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+/* 最近推荐记录 */
+.recent-referrals {
+  margin-bottom: 40rpx;
+}
+
+.referral-list {
+  background: white;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+
+.referral-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 25rpx 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.referral-item:last-child {
+  border-bottom: none;
+}
+
+.item-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+  margin-bottom: 6rpx;
+}
+
+.referral-date {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.item-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.commission {
+  font-size: 28rpx;
+  color: #007aff;
+  font-weight: bold;
+  margin-bottom: 6rpx;
+}
+
+.status {
+  font-size: 22rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 20rpx;
+  color: white;
+}
+
+.status.pending {
+  background: #ff9500;
+}
+
+.status.completed {
+  background: #4cd964;
+}
+
+.status.cancelled {
+  background: #ff3b30;
+}
+
+/* 加载状态 */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200rpx;
+  color: #999;
+  font-size: 28rpx;
+}

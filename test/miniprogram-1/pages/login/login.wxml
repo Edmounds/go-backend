@@ -1,0 +1,35 @@
+<view class="container">
+  <view class="login-header">
+    <image class="logo" src="/images/logo.png" mode="aspectFit"></image>
+    <text class="title">微信小程序登录测试</text>
+    <text class="subtitle">测试登录和推荐码功能</text>
+  </view>
+  
+  <view class="login-content">
+    <button 
+      class="login-btn" 
+      bindtap="wxLogin" 
+      loading="{{loading}}"
+      disabled="{{loading}}"
+    >
+      {{loading ? '登录中...' : '微信一键登录'}}
+    </button>
+    
+    <button 
+      class="user-info-btn" 
+      bindtap="getUserProfile"
+      wx:if="{{!hasUserInfo}}"
+    >
+      获取用户信息
+    </button>
+    
+    <view class="user-info" wx:if="{{hasUserInfo}}">
+      <image class="avatar" src="{{userInfo.avatarUrl}}"></image>
+      <text class="nickname">{{userInfo.nickName}}</text>
+    </view>
+  </view>
+  
+  <view class="login-footer">
+    <text class="tips">登录即表示同意用户协议和隐私政策</text>
+  </view>
+</view>
