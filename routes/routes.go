@@ -46,7 +46,12 @@ func SetupRoutes(r *gin.Engine) {
 
 			// 用户管理路由
 			protected.GET("/users/:user_id", controllers.GetUserHandler())
-			protected.PUT("/users/:user_id", controllers.UpdateUserHandler())
+
+			// 地址管理路由
+			protected.POST("/users/:user_id/address", controllers.CreateAddressHandler())
+			protected.GET("/users/:user_id/addresses", controllers.GetUserAddressesHandler())
+			protected.PUT("/users/:user_id/address/:address_id", controllers.UpdateAddressHandler())
+			protected.DELETE("/users/:user_id/address/:address_id", controllers.DeleteAddressHandler())
 
 			// 管理员路由
 			protected.PUT("/admin/users/:user_id/agent-level", controllers.UpdateAgentLevelHandler())

@@ -17,7 +17,8 @@ import (
 
 // WechatLoginRequest 微信登录请求
 type WechatLoginRequest struct {
-	Code string `json:"code" binding:"required"`
+	Code         string `json:"code" binding:"required"`
+	ReferralCode string `json:"referral_code,omitempty"` // 可选的推荐码参数，用于扫码进入的场景
 }
 
 type WechatLoginResponse struct {
@@ -98,15 +99,65 @@ func WechatAuthHandler() gin.HandlerFunc {
 				UpdatedAt: time.Now(),
 			}
 
+			// 如果提供了推荐码，验证并设置
+			if req.ReferralCode != "" {
+				// 验证推荐码是否有效
+				valid, err := ValidateReferralCode(req.ReferralCode)
+				if err != nil {
+					panic("验证推荐码失败: " + err.Error())
+				}
+				if !valid {
+					panic("推荐码无效")
+				}
+				newUser.ReferredBy = req.ReferralCode
+			}
+
 			err := CreateUser(newUser)
 			if err != nil {
 				panic("创建用户失败: " + err.Error())
 			}
 
+			// 如果设置了推荐码，创建推荐关系记录
+			if req.ReferralCode != "" {
+				err := ProcessNewUserReferral(newUser.OpenID, req.ReferralCode)
+				if err != nil {
+					// 记录错误但不影响登录流程
+					middlewares.HandleError(err, "处理推荐关系失败", false)
+				}
+			}
+
 			user = newUser
+		} else {
+			// 用户已存在，如果用户没有推荐码且提供了推荐码，则设置推荐码
+			if user.ReferredBy == "" && req.ReferralCode != "" {
+				// 验证推荐码是否有效
+				valid, err := ValidateReferralCode(req.ReferralCode)
+				if err != nil {
+					panic("验证推荐码失败: " + err.Error())
+				}
+				if !valid {
+					panic("推荐码无效")
+				}
+
+				// 更新用户推荐码
+				err = UpdateUserReferredBy(user.OpenID, req.ReferralCode)
+				if err != nil {
+					panic("设置推荐码失败: " + err.Error())
+				}
+
+				// 处理推荐关系
+				err = ProcessNewUserReferral(user.OpenID, req.ReferralCode)
+				if err != nil {
+					// 记录错误但不影响登录流程
+					middlewares.HandleError(err, "处理推荐关系失败", false)
+				}
+
+				// 更新用户对象
+				user.ReferredBy = req.ReferralCode
+			}
 		}
 
-		// 用户已存在，生成JWT token
+		// 生成JWT token
 		tokenUser := middlewares.User{
 			UserName:     user.UserName,
 			UserId:       user.OpenID,
@@ -203,7 +254,8 @@ func GetCachedAccessToken() (string, error) {
 
 // DevLoginRequest 开发环境登录请求
 type DevLoginRequest struct {
-	OpenID string `json:"openid" binding:"required"`
+	OpenID       string `json:"openid" binding:"required"`
+	ReferralCode string `json:"referral_code,omitempty"` // 可选的推荐码参数
 }
 
 // DevLoginHandler 开发环境登录处理器 - 仅用于测试
@@ -229,12 +281,62 @@ func DevLoginHandler() gin.HandlerFunc {
 				UpdatedAt: time.Now(),
 			}
 
+			// 如果提供了推荐码，验证并设置
+			if req.ReferralCode != "" {
+				// 验证推荐码是否有效
+				valid, err := ValidateReferralCode(req.ReferralCode)
+				if err != nil {
+					panic("验证推荐码失败: " + err.Error())
+				}
+				if !valid {
+					panic("推荐码无效")
+				}
+				newUser.ReferredBy = req.ReferralCode
+			}
+
 			err := CreateUser(newUser)
 			if err != nil {
 				panic("创建用户失败: " + err.Error())
 			}
 
+			// 如果设置了推荐码，创建推荐关系记录
+			if req.ReferralCode != "" {
+				err := ProcessNewUserReferral(newUser.OpenID, req.ReferralCode)
+				if err != nil {
+					// 记录错误但不影响登录流程
+					middlewares.HandleError(err, "处理推荐关系失败", false)
+				}
+			}
+
 			user = newUser
+		} else {
+			// 用户已存在，如果用户没有推荐码且提供了推荐码，则设置推荐码
+			if user.ReferredBy == "" && req.ReferralCode != "" {
+				// 验证推荐码是否有效
+				valid, err := ValidateReferralCode(req.ReferralCode)
+				if err != nil {
+					panic("验证推荐码失败: " + err.Error())
+				}
+				if !valid {
+					panic("推荐码无效")
+				}
+
+				// 更新用户推荐码
+				err = UpdateUserReferredBy(user.OpenID, req.ReferralCode)
+				if err != nil {
+					panic("设置推荐码失败: " + err.Error())
+				}
+
+				// 处理推荐关系
+				err = ProcessNewUserReferral(user.OpenID, req.ReferralCode)
+				if err != nil {
+					// 记录错误但不影响登录流程
+					middlewares.HandleError(err, "处理推荐关系失败", false)
+				}
+
+				// 更新用户对象
+				user.ReferredBy = req.ReferralCode
+			}
 		}
 
 		// 生成JWT token

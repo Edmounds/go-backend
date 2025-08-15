@@ -204,6 +204,31 @@ type QRCodeRGB struct {
 	B int `json:"b"`
 }
 
+// CreateUserRequest 创建用户请求
+type CreateUserRequest struct {
+	OpenID       string `json:"openID" binding:"required"`
+	UserName     string `json:"user_name,omitempty"`
+	UserPassword string `json:"user_password,omitempty"`
+	Class        string `json:"class,omitempty"`
+	Age          int    `json:"age,omitempty"`
+	School       string `json:"school,omitempty"`
+	Phone        string `json:"phone,omitempty"`
+	City         string `json:"city,omitempty"`
+	ReferredBy   string `json:"referred_by,omitempty"`
+}
+
+// AddressRequest 地址请求
+type AddressRequest struct {
+	RecipientName string `json:"recipient_name" binding:"required"`
+	Phone         string `json:"phone" binding:"required"`
+	Province      string `json:"province" binding:"required"`
+	City          string `json:"city" binding:"required"`
+	District      string `json:"district"`
+	Street        string `json:"street" binding:"required"`
+	PostalCode    string `json:"postal_code"`
+	IsDefault     bool   `json:"is_default"`
+}
+
 // SearchRequest 搜索请求结构体
 type SearchRequest struct {
 	Query string `json:"query" binding:"required"`                          // 搜索关键词

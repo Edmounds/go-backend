@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"miniprogram/middlewares"
 	"miniprogram/models"
 	"time"
 
@@ -13,43 +14,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 )
-
-// CreateUserRequest 创建用户请求
-type CreateUserRequest struct {
-	OpenID       string `json:"openID" binding:"required"`
-	UserName     string `json:"user_name,omitempty"`
-	UserPassword string `json:"user_password,omitempty"`
-	Class        string `json:"class,omitempty"`
-	Age          int    `json:"age,omitempty"`
-	School       string `json:"school,omitempty"`
-	Phone        string `json:"phone,omitempty"`
-	City         string `json:"city,omitempty"`
-	ReferredBy   string `json:"referred_by,omitempty"`
-}
-
-// UpdateUserRequest 更新用户信息请求
-type UpdateUserRequest struct {
-	UserName     string `json:"user_name,omitempty"`
-	UserPassword string `json:"user_password,omitempty"`
-	Class        string `json:"class,omitempty"`
-	Age          int    `json:"age,omitempty"`
-	School       string `json:"school,omitempty"`
-	Phone        string `json:"phone,omitempty"`
-	City         string `json:"city,omitempty"`
-	AgentLevel   int    `json:"agent_level,omitempty"`
-}
-
-// AddressRequest 地址请求
-type AddressRequest struct {
-	RecipientName string `json:"recipient_name" binding:"required"`
-	Phone         string `json:"phone" binding:"required"`
-	Province      string `json:"province" binding:"required"`
-	City          string `json:"city" binding:"required"`
-	District      string `json:"district"`
-	Street        string `json:"street" binding:"required"`
-	PostalCode    string `json:"postal_code"`
-	IsDefault     bool   `json:"is_default"`
-}
 
 // ===== 用户信息处理函数 =====
 
@@ -139,7 +103,7 @@ func CheckPassword(hashedPassword, password string) bool {
 // CreateUserHandler 创建或更新用户处理器
 func CreateUserHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req CreateUserRequest
+		var req models.CreateUserRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			BadRequestResponse(c, "请求参数错误", err)
 			return
@@ -152,9 +116,79 @@ func CreateUserHandler() gin.HandlerFunc {
 			return
 		}
 
-		// 2. 如果用户已存在，返回现有用户信息
+		// 2. 如果用户已存在，检查是否为信息完善请求
 		if existingUser != nil {
-			SuccessResponse(c, "用户已存在", existingUser)
+			// 检查是否尝试修改已有推荐码
+			if existingUser.ReferredBy != "" && req.ReferredBy != "" && existingUser.ReferredBy != req.ReferredBy {
+				BadRequestResponse(c, "用户已有推荐码，不允许修改", nil)
+				return
+			}
+
+			// 用户已存在且没有尝试修改推荐码，允许更新其他信息
+			updateData := make(map[string]interface{})
+			if req.UserName != "" {
+				updateData["user_name"] = req.UserName
+			}
+			if req.Class != "" {
+				updateData["class"] = req.Class
+			}
+			if req.Age > 0 {
+				updateData["age"] = req.Age
+			}
+			if req.School != "" {
+				updateData["school"] = req.School
+			}
+			if req.Phone != "" {
+				updateData["phone"] = req.Phone
+			}
+			if req.City != "" {
+				updateData["city"] = req.City
+			}
+			if req.UserPassword != "" {
+				hashedPassword, err := HashPassword(req.UserPassword)
+				if err != nil {
+					InternalServerErrorResponse(c, "密码加密失败", err)
+					return
+				}
+				updateData["user_password"] = hashedPassword
+			}
+			// 如果用户没有推荐码且提供了推荐码，则设置推荐码
+			if existingUser.ReferredBy == "" && req.ReferredBy != "" {
+				updateData["referred_by"] = req.ReferredBy
+			}
+
+			if len(updateData) > 0 {
+				updateData["updated_at"] = time.Now()
+				collection := GetCollection("users")
+				ctx, cancel := CreateDBContext()
+				defer cancel()
+
+				filter := bson.M{"openID": req.OpenID}
+				update := bson.M{"$set": updateData}
+				_, err = collection.UpdateOne(ctx, filter, update)
+				if err != nil {
+					InternalServerErrorResponse(c, "更新用户信息失败", err)
+					return
+				}
+
+				// 如果设置了推荐码，处理推荐关系
+				if existingUser.ReferredBy == "" && req.ReferredBy != "" {
+					err := ProcessNewUserReferral(existingUser.OpenID, req.ReferredBy)
+					if err != nil {
+						// 记录错误但不影响用户信息更新
+						middlewares.HandleError(err, "处理推荐关系失败", false)
+					}
+				}
+			}
+
+			// 重新获取更新后的用户信息
+			updatedUser, err := GetUserByOpenID(req.OpenID)
+			if err != nil {
+				InternalServerErrorResponse(c, "获取更新后的用户信息失败", err)
+				return
+			}
+
+			SuccessResponse(c, "用户信息更新成功", updatedUser)
 			return
 		}
 
@@ -173,14 +207,24 @@ func CreateUserHandler() gin.HandlerFunc {
 
 		// 4. 创建用户对象
 		user := &models.User{
-			OpenID:     req.OpenID,
-			UserName:   req.UserName,
-			Class:      req.Class,
-			Age:        req.Age,
-			School:     req.School,
-			Phone:      req.Phone,
-			City:       req.City,
-			ReferredBy: req.ReferredBy,
+			OpenID:         req.OpenID,
+			UserName:       req.UserName,
+			Class:          req.Class,
+			Age:            req.Age,
+			School:         req.School,
+			Phone:          req.Phone,
+			City:           req.City,
+			ReferredBy:     req.ReferredBy,
+			CollectedCards: []string{},         // 初始化收藏单词卡为空数组
+			Addresses:      []models.Address{}, // 初始化地址为空数组
+			Progress: models.Progress{
+				CurrentUnit:  "",
+				LearnedWords: []string{}, // 初始化已学习单词为空数组
+			},
+			ManagedSchools: []string{}, // 初始化管理学校为空数组
+			ManagedRegions: []string{}, // 初始化管理区域为空数组
+			CreatedAt:      time.Now(),
+			UpdatedAt:      time.Now(),
 		}
 
 		// 5. 如果提供了密码，进行加密
@@ -203,75 +247,6 @@ func CreateUserHandler() gin.HandlerFunc {
 	}
 }
 
-// UpdateUserHandler 更新用户信息处理器
-func UpdateUserHandler() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// 获取 user_id 参数，注意：这里的 user_id 实际上是微信的 openID，不是 MongoDB 的 _id
-		openID := c.Param("user_id")
-		var req UpdateUserRequest
-
-		if err := c.ShouldBindJSON(&req); err != nil {
-			BadRequestResponse(c, "请求参数错误", err)
-			return
-		}
-
-		// 1. 验证用户是否存在
-		_, err := GetUserByOpenID(openID)
-		if err != nil {
-			NotFoundResponse(c, "用户不存在", err)
-			return
-		}
-
-		// 2. 构建更新数据
-		collection := GetCollection("users")
-		ctx, cancel := CreateDBContext()
-		defer cancel()
-
-		updateData := bson.M{"updated_at": time.Now()}
-		if req.UserName != "" {
-			updateData["user_name"] = req.UserName
-		}
-		if req.Class != "" {
-			updateData["class"] = req.Class
-		}
-		if req.Age > 0 {
-			updateData["age"] = req.Age
-		}
-		if req.School != "" {
-			updateData["school"] = req.School
-		}
-		if req.Phone != "" {
-			updateData["phone"] = req.Phone
-		}
-		if req.City != "" {
-			updateData["city"] = req.City
-		}
-		if req.AgentLevel > 0 {
-			updateData["agent_level"] = req.AgentLevel
-			updateData["is_agent"] = true
-		}
-
-		if req.UserPassword != "" {
-			hashedPassword, err := HashPassword(req.UserPassword)
-			if err != nil {
-				InternalServerErrorResponse(c, "密码加密失败", err)
-				return
-			}
-			updateData["user_password"] = hashedPassword
-		}
-
-		update := bson.M{"$set": updateData}
-		filter := bson.M{"openID": openID}
-		_, err = collection.UpdateOne(ctx, filter, update)
-		if err != nil {
-			InternalServerErrorResponse(c, "更新用户信息失败", err)
-			return
-		}
-
-		SuccessResponse(c, "用户信息更新成功", nil)
-	}
-}
-
 // GetUserHandler 获取用户信息处理器
 func GetUserHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -286,4 +261,270 @@ func GetUserHandler() gin.HandlerFunc {
 
 		SuccessResponse(c, "获取用户信息成功", user)
 	}
+}
+
+// ===== 地址管理处理函数 =====
+
+// CreateAddressHandler 创建用户地址处理器
+func CreateAddressHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 获取 user_id 参数（这里的 user_id 实际上是微信的 openID）
+		openID := c.Param("user_id")
+
+		// 解析请求体
+		var req models.AddressRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			BadRequestResponse(c, "请求参数错误", err)
+			return
+		}
+
+		// 检查用户是否存在
+		_, err := GetUserByOpenID(openID)
+		if err != nil {
+			NotFoundResponse(c, "用户不存在", err)
+			return
+		}
+
+		// 创建地址对象
+		address := models.Address{
+			ID:            primitive.NewObjectID(),
+			RecipientName: req.RecipientName,
+			Phone:         req.Phone,
+			Province:      req.Province,
+			City:          req.City,
+			District:      req.District,
+			Street:        req.Street,
+			PostalCode:    req.PostalCode,
+			IsDefault:     req.IsDefault,
+			CreatedAt:     time.Now(),
+			UpdatedAt:     time.Now(),
+		}
+
+		// 暂时注释掉默认地址逻辑，先让基本功能工作
+		// if req.IsDefault {
+		// 	err := SetDefaultAddress(openID, address.ID)
+		// 	if err != nil {
+		// 		InternalServerErrorResponse(c, "设置默认地址失败", err)
+		// 		return
+		// 	}
+		// }
+
+		// 将地址添加到用户的地址列表中
+		collection := GetCollection("users")
+		ctx, cancel := CreateDBContext()
+		defer cancel()
+
+		// 直接添加地址到用户的地址数组（新用户都有正确的空数组初始化）
+		filter := bson.M{"openID": openID}
+		update := bson.M{
+			"$push": bson.M{"addresses": address},
+			"$set":  bson.M{"updated_at": time.Now()},
+		}
+
+		_, err = collection.UpdateOne(ctx, filter, update)
+		if err != nil {
+			InternalServerErrorResponse(c, "添加地址失败", err)
+			return
+		}
+
+		CreatedResponse(c, "地址创建成功", address)
+	}
+}
+
+// GetUserAddressesHandler 获取用户地址列表处理器
+func GetUserAddressesHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 获取 user_id 参数（这里的 user_id 实际上是微信的 openID）
+		openID := c.Param("user_id")
+
+		// 获取用户信息
+		user, err := GetUserByOpenID(openID)
+		if err != nil {
+			NotFoundResponse(c, "用户不存在", err)
+			return
+		}
+
+		SuccessResponse(c, "获取地址列表成功", user.Addresses)
+	}
+}
+
+// UpdateAddressHandler 更新用户地址处理器
+func UpdateAddressHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 获取参数
+		openID := c.Param("user_id")
+		addressIDStr := c.Param("address_id")
+
+		// 转换地址ID
+		addressID, err := primitive.ObjectIDFromHex(addressIDStr)
+		if err != nil {
+			BadRequestResponse(c, "地址ID格式错误", err)
+			return
+		}
+
+		// 解析请求体
+		var req models.AddressRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			BadRequestResponse(c, "请求参数错误", err)
+			return
+		}
+
+		// 检查用户是否存在
+		_, err = GetUserByOpenID(openID)
+		if err != nil {
+			NotFoundResponse(c, "用户不存在", err)
+			return
+		}
+
+		// 如果设置为默认地址，需要先将其他地址设为非默认
+		if req.IsDefault {
+			err := SetDefaultAddress(openID, addressID)
+			if err != nil {
+				InternalServerErrorResponse(c, "设置默认地址失败", err)
+				return
+			}
+		}
+
+		// 更新地址信息
+		collection := GetCollection("users")
+		ctx, cancel := CreateDBContext()
+		defer cancel()
+
+		filter := bson.M{
+			"openID":        openID,
+			"addresses._id": addressID,
+		}
+		update := bson.M{
+			"$set": bson.M{
+				"addresses.$.recipient_name": req.RecipientName,
+				"addresses.$.phone":          req.Phone,
+				"addresses.$.province":       req.Province,
+				"addresses.$.city":           req.City,
+				"addresses.$.district":       req.District,
+				"addresses.$.street":         req.Street,
+				"addresses.$.postal_code":    req.PostalCode,
+				"addresses.$.is_default":     req.IsDefault,
+				"addresses.$.updated_at":     time.Now(),
+				"updated_at":                 time.Now(),
+			},
+		}
+
+		result, err := collection.UpdateOne(ctx, filter, update)
+		if err != nil {
+			InternalServerErrorResponse(c, "更新地址失败", err)
+			return
+		}
+
+		if result.MatchedCount == 0 {
+			NotFoundResponse(c, "地址不存在", nil)
+			return
+		}
+
+		SuccessResponse(c, "地址更新成功", nil)
+	}
+}
+
+// DeleteAddressHandler 删除用户地址处理器
+func DeleteAddressHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 获取参数
+		openID := c.Param("user_id")
+		addressIDStr := c.Param("address_id")
+
+		// 转换地址ID
+		addressID, err := primitive.ObjectIDFromHex(addressIDStr)
+		if err != nil {
+			BadRequestResponse(c, "地址ID格式错误", err)
+			return
+		}
+
+		// 检查用户是否存在
+		_, err = GetUserByOpenID(openID)
+		if err != nil {
+			NotFoundResponse(c, "用户不存在", err)
+			return
+		}
+
+		// 删除地址
+		collection := GetCollection("users")
+		ctx, cancel := CreateDBContext()
+		defer cancel()
+
+		filter := bson.M{"openID": openID}
+		update := bson.M{
+			"$pull": bson.M{"addresses": bson.M{"_id": addressID}},
+			"$set":  bson.M{"updated_at": time.Now()},
+		}
+
+		result, err := collection.UpdateOne(ctx, filter, update)
+		if err != nil {
+			InternalServerErrorResponse(c, "删除地址失败", err)
+			return
+		}
+
+		if result.MatchedCount == 0 {
+			NotFoundResponse(c, "用户不存在", nil)
+			return
+		}
+
+		SuccessResponse(c, "地址删除成功", nil)
+	}
+}
+
+// ===== 地址管理辅助函数 =====
+
+// SetDefaultAddress 设置默认地址（将其他地址设为非默认）
+func SetDefaultAddress(openID string, defaultAddressID primitive.ObjectID) error {
+	collection := GetCollection("users")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	// 确保用户有addresses数组，如果没有则初始化
+	filter := bson.M{"openID": openID, "addresses": bson.M{"$exists": false}}
+	update := bson.M{
+		"$set": bson.M{
+			"addresses":  []models.Address{},
+			"updated_at": time.Now(),
+		},
+	}
+	collection.UpdateOne(ctx, filter, update)
+
+	// 如果addresses字段为null，也进行初始化
+	filter = bson.M{"openID": openID, "addresses": nil}
+	update = bson.M{
+		"$set": bson.M{
+			"addresses":  []models.Address{},
+			"updated_at": time.Now(),
+		},
+	}
+	collection.UpdateOne(ctx, filter, update)
+
+	// 先将所有地址设为非默认
+	filter = bson.M{"openID": openID, "addresses": bson.M{"$ne": nil}}
+	update = bson.M{
+		"$set": bson.M{
+			"addresses.$[].is_default": false,
+			"updated_at":               time.Now(),
+		},
+	}
+
+	_, err := collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	// 再将指定地址设为默认
+	filter = bson.M{
+		"openID":        openID,
+		"addresses._id": defaultAddressID,
+	}
+	update = bson.M{
+		"$set": bson.M{
+			"addresses.$.is_default": true,
+			"updated_at":             time.Now(),
+		},
+	}
+
+	_, err = collection.UpdateOne(ctx, filter, update)
+	return err
 }

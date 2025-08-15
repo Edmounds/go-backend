@@ -413,6 +413,9 @@ func DeductProductStock(orderIDHex string) error {
 			"$inc": bson.M{
 				"stock": -item.Quantity,
 			},
+			"$set": bson.M{
+				"updated_at": time.Now(),
+			},
 		}
 		_, err = collection.UpdateOne(ctx, bson.M{"product_id": item.ProductID}, update)
 		if err != nil {

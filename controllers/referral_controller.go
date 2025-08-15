@@ -268,6 +268,36 @@ func generateRandomString(length int) string {
 	return hex.EncodeToString(bytes)
 }
 
+// ProcessNewUserReferral 处理新用户的推荐关系
+func ProcessNewUserReferral(userOpenID string, referralCode string) error {
+	// 1. 获取推荐人信息
+	referrer, err := GetUserByReferralCode(referralCode)
+	if err != nil {
+		return err
+	}
+
+	// 2. 确保推荐人有推荐记录
+	err = CreateReferralRecord(referralCode, referrer.OpenID)
+	if err != nil && err != mongo.ErrNoDocuments {
+		// 如果不是"已存在"的错误，则返回错误
+		return err
+	}
+
+	// 3. 获取被推荐用户信息
+	referredUser, err := GetUserByOpenID(userOpenID)
+	if err != nil {
+		return err
+	}
+
+	// 4. 添加推荐使用记录（暂时不创建佣金记录，等待订单完成时再创建）
+	err = AddReferralUsage(referralCode, referredUser.OpenID, referredUser.UserName, "", 0.0)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // UpdateUserReferredBy 更新用户的推荐人信息
 func UpdateUserReferredBy(openID string, referralCode string) error {
 	collection := GetCollection("users")

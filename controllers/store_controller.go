@@ -875,7 +875,7 @@ func UpdateCart(cart *models.Cart) error {
 		"$set": bson.M{
 			"items":        cart.Items,
 			"total_amount": cart.TotalAmount,
-			"updated_at":   cart.UpdatedAt,
+			"updated_at":   time.Now(),
 		},
 	}
 
