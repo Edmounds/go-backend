@@ -32,6 +32,9 @@
     },
     {
       "name": "System"
+    },
+    {
+      "name": "Search"
     }
   ],
   "paths": {
@@ -1561,6 +1564,305 @@
         ]
       }
     },
+    "/api/search": {
+      "post": {
+        "summary": "综合搜索",
+        "deprecated": false,
+        "description": "支持单词、课本、订单的综合模糊搜索",
+        "tags": [
+          "Search"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "query",
+                  "type"
+                ],
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "description": "搜索关键词",
+                    "example": "英语"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["word", "book", "order", "all"],
+                    "description": "搜索类型",
+                    "example": "all"
+                  },
+                  "page": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 1,
+                    "description": "页码"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "default": 20,
+                    "description": "每页数量"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "搜索完成",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/search/words": {
+      "get": {
+        "summary": "单词模糊搜索",
+        "deprecated": false,
+        "description": "对单词名称和含义进行模糊搜索",
+        "tags": [
+          "Search"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "搜索关键词",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "hello"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "页码",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "每页数量",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "单词搜索完成",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/search/books": {
+      "get": {
+        "summary": "课本模糊搜索",
+        "deprecated": false,
+        "description": "对课本名称、版本、描述、作者、出版社进行模糊搜索",
+        "tags": [
+          "Search"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "搜索关键词",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "英语"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "页码",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "每页数量",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "课本搜索完成",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/search/orders": {
+      "get": {
+        "summary": "订单搜索",
+        "deprecated": false,
+        "description": "根据商品名称搜索用户订单",
+        "tags": [
+          "Search"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "搜索关键词（商品名称）",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "学习卡"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "description": "用户ID（openID），可选",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "页码",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "每页数量",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "订单搜索完成",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/health": {
       "get": {
         "summary": "健康检查",
@@ -2129,11 +2431,29 @@
           },
           "book_name": {
             "type": "string",
-            "description": "书籍名称"
+            "description": "书籍名称",
+            "example": "大学英语四级词汇"
           },
           "book_version": {
             "type": "string",
-            "description": "书籍版本"
+            "description": "书籍版本",
+            "example": "2024版"
+          },
+          "description": {
+            "type": "string",
+            "description": "书籍描述",
+            "example": "涵盖大学英语四级考试所需的核心词汇"
+          },
+          "level": {
+            "type": "string",
+            "description": "难度等级",
+            "enum": ["beginner", "intermediate", "advanced"],
+            "example": "intermediate"
+          },
+          "total_words": {
+            "type": "integer",
+            "description": "总单词数",
+            "example": 2000
           },
           "units": {
             "type": "array",
@@ -2141,6 +2461,26 @@
               "$ref": "#/components/schemas/Unit"
             },
             "description": "单元列表"
+          },
+          "cover_image": {
+            "type": "string",
+            "description": "封面图片URL",
+            "example": "https://example.com/book_cover.jpg"
+          },
+          "author": {
+            "type": "string",
+            "description": "作者",
+            "example": "英语教学专家组"
+          },
+          "publisher": {
+            "type": "string",
+            "description": "出版社",
+            "example": "教育出版社"
+          },
+          "publication_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "出版日期"
           },
           "created_at": {
             "type": "string",
@@ -2163,7 +2503,12 @@
           },
           "unit_name": {
             "type": "string",
-            "description": "单元名称"
+            "description": "单元名称",
+            "example": "Unit 1: Greetings"
+          },
+          "book_id": {
+            "type": "string",
+            "description": "所属书籍ID"
           },
           "created_at": {
             "type": "string",
@@ -2786,6 +3131,95 @@
             "type": "string",
             "description": "错误详情",
             "example": "VALIDATION_ERROR"
+          }
+        }
+      },
+      "SearchRequest": {
+        "type": "object",
+        "required": [
+          "query",
+          "type"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "搜索关键词",
+            "example": "英语"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["word", "book", "order", "all"],
+            "description": "搜索类型",
+            "example": "all"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1,
+            "description": "页码"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20,
+            "description": "每页数量"
+          }
+        }
+      },
+      "SearchResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "搜索完成"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "words": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Word"
+                },
+                "description": "单词搜索结果"
+              },
+              "books": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Book"
+                },
+                "description": "课本搜索结果"
+              },
+              "orders": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Order"
+                },
+                "description": "订单搜索结果"
+              },
+              "total": {
+                "type": "integer",
+                "description": "总结果数量",
+                "example": 25
+              },
+              "page": {
+                "type": "integer",
+                "description": "当前页码",
+                "example": 1
+              },
+              "limit": {
+                "type": "integer",
+                "description": "每页数量",
+                "example": 20
+              }
+            }
           }
         }
       }

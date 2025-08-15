@@ -203,3 +203,47 @@ type QRCodeRGB struct {
 	G int `json:"g"`
 	B int `json:"b"`
 }
+
+// SearchRequest 搜索请求结构体
+type SearchRequest struct {
+	Query string `json:"query" binding:"required"`                          // 搜索关键词
+	Type  string `json:"type" binding:"required,oneof=word book order all"` // 搜索类型
+	Page  int    `json:"page"`                                              // 页码
+	Limit int    `json:"limit"`                                             // 每页数量
+}
+
+// SearchResponse 搜索响应结构体
+type SearchResponse struct {
+	Words  []Word  `json:"words,omitempty"`  // 单词搜索结果
+	Books  []Book  `json:"books,omitempty"`  // 课本搜索结果
+	Orders []Order `json:"orders,omitempty"` // 订单搜索结果
+	Total  int64   `json:"total"`            // 总数量
+	Page   int     `json:"page"`             // 当前页码
+	Limit  int     `json:"limit"`            // 每页数量
+}
+
+// Book 课本结构体
+type Book struct {
+	ID              primitive.ObjectID   `bson:"_id,omitempty" json:"_id,omitempty"`
+	BookName        string               `bson:"book_name" json:"book_name"`
+	BookVersion     string               `bson:"book_version" json:"book_version"`
+	Description     string               `bson:"description,omitempty" json:"description,omitempty"`
+	Level           string               `bson:"level,omitempty" json:"level,omitempty"`
+	TotalWords      int                  `bson:"total_words,omitempty" json:"total_words,omitempty"`
+	Units           []primitive.ObjectID `bson:"units,omitempty" json:"units,omitempty"`
+	CoverImage      string               `bson:"cover_image,omitempty" json:"cover_image,omitempty"`
+	Author          string               `bson:"author,omitempty" json:"author,omitempty"`
+	Publisher       string               `bson:"publisher,omitempty" json:"publisher,omitempty"`
+	PublicationDate time.Time            `bson:"publication_date,omitempty" json:"publication_date,omitempty"`
+	CreatedAt       time.Time            `bson:"created_at,omitempty" json:"created_at,omitempty"`
+	UpdatedAt       time.Time            `bson:"updated_at,omitempty" json:"updated_at,omitempty"`
+}
+
+// Unit 单元结构体
+type Unit struct {
+	ID        primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
+	UnitName  string             `bson:"unit_name" json:"unit_name"`
+	BookID    primitive.ObjectID `bson:"book_id" json:"book_id"`
+	CreatedAt time.Time          `bson:"created_at,omitempty" json:"created_at,omitempty"`
+	UpdatedAt time.Time          `bson:"updated_at,omitempty" json:"updated_at,omitempty"`
+}

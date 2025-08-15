@@ -27,6 +27,11 @@ func SetupRoutes(r *gin.Engine) {
 			// 学习相关公开路由
 			public.GET("/books", controllers.GetBooksHandler())
 
+			// 搜索相关公开路由
+			public.POST("/search", controllers.SearchHandler())
+			public.GET("/search/words", controllers.SearchWordsHandler())
+			public.GET("/search/books", controllers.SearchBooksHandler())
+
 			// 推荐相关公开路由
 			public.POST("/referrals/validate", controllers.ValidateReferralCodeHandler())
 		}
@@ -74,6 +79,9 @@ func SetupRoutes(r *gin.Engine) {
 
 			// 微信支付相关路由
 			protected.POST("/users/:user_id/orders/pay", controllers.CreateWechatPayOrderHandler())
+
+			// 受保护的搜索路由（需要用户身份）
+			protected.GET("/search/orders", controllers.SearchOrdersHandler())
 		}
 
 		// 微信支付回调路由（不需要JWT认证）

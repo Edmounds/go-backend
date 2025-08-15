@@ -1,4 +1,67 @@
-- Linux AMD64编译 $env:GOOS="linux"; $env:GOARCH="amd64"; go build -o myserver test.go
+- Linux AMD64编译 $env:GOOS="linux"; $env:GOARCH="amd64"; go build -o myserver main.go
 
 ## 华为云图库使用
 - url解析规则
+
+## 📋 项目检查报告
+
+### 🔴 **重要安全问题**
+
+**1. 微信支付回调安全隐患** (文件：`controllers/wechatPay_controller.go`)
+```go
+// 第221-222行和第242-243行
+// TODO: 这里应该进行签名验证和解密，目前先简化处理
+// TODO: 解密resource.ciphertext获取具体的交易信息
+```
+**风险：** 缺少签名验证可能导致伪造支付回调，造成资金损失
+**建议：** 必须实现微信支付回调的签名验证和数据解密
+
+### 🟡 **功能缺失问题**
+
+**2. 地址信息查询缺失** (文件：`controllers/store_controller.go`)
+```go
+// 第467行
+// TODO: 这里应该根据AddressID查询具体地址信息
+```
+**影响：** 订单创建时只返回地址ID，缺少完整地址信息
+
+**3. 书籍和单词查询逻辑未实现** (文件：`controllers/progress_controller.go`)
+```go
+// 第94-97行和第142-145行
+// TODO: 实现书籍列表查询逻辑
+// TODO: 实现书籍单词查询逻辑
+```
+**影响：** 当前返回硬编码的测试数据，无法提供真实的书籍和单词数据
+
+**4. 代理提取功能缺少第三方支付接口** (文件：`controllers/agent_controller.go`)
+```go
+// 第618-619行
+// TODO: 在实际应用中，这里应该调用第三方支付接口处理提取
+```
+**影响：** 提取申请只是记录状态，无法实际转账
+
+### 🟢 **代码质量良好的方面**
+
+✅ **数据库上下文使用规范**：所有控制器都正确使用 `CreateDBContext()` 和 `defer cancel()`
+
+✅ **错误处理相对统一**：大部分地方使用了 `BadRequestResponse`、`InternalServerErrorResponse` 等统一响应函数
+
+✅ **openID 使用规范**：遵循了项目规则，使用 openID 作为用户唯一标识
+
+✅ **panic 使用合理**：认证控制器中的 panic 被错误处理中间件正确捕获
+
+### 🔍 **发现的轻微不一致**
+
+**错误响应格式混用：** 
+- 部分地方使用了统一的错误响应函数（符合规范）
+- 部分地方直接使用 `c.JSON()` 返回错误（如 `store_controller.go` 中多处）
+
+**建议优先级：**
+1. 🔴 **立即修复**：微信支付回调安全问题
+2. 🟡 **近期完善**：地址查询、书籍/单词查询、代理提取功能
+3. 🟢 **逐步优化**：统一所有错误响应格式
+
+
+# TODO
+
+还有评价和售后系统

@@ -65,6 +65,15 @@
 | GET | `/api/words/:word_name/card` | 根据单词名称获取单词卡片详细信息（包括图片） | 是 |
 | GET | `/api/words?unit_name=xxx&book_name=xxx` | 通过单元名称和书籍名称获取单词列表（可选参数） | 是 |
 
+### 5.2. 搜索相关路由
+
+| 方法 | 路径 | 描述 | 认证 |
+|------|------|------|------|
+| POST | `/api/search` | 综合搜索（支持单词、课本、订单） | 否 |
+| GET | `/api/search/words` | 单词模糊搜索 | 否 |
+| GET | `/api/search/books` | 课本模糊搜索 | 否 |
+| GET | `/api/search/orders` | 订单搜索（根据商品名称） | 是 |
+
 ### 6. 推荐系统相关路由
 
 | 方法 | 路径 | 描述 | 认证 |
@@ -95,6 +104,7 @@
 - `store_controller.go` - 商城相关处理器
 - `progress_controller.go` - 学习进度相关处理器
 - `card_controller.go` - 单词卡片相关处理器
+- `search_controller.go` - 搜索功能相关处理器
 - `referral_controller.go` - 推荐系统相关处理器
 - `agent_controller.go` - 代理系统相关处理器
 
