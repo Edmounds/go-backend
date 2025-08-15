@@ -18,6 +18,7 @@ func SetupRoutes(r *gin.Engine) {
 		{
 			// 用户认证相关路由
 			public.POST("/auth", controllers.WechatAuthHandler())
+			public.POST("/dev-login", controllers.DevLoginHandler()) // 开发环境专用登录接口
 			public.POST("/users", controllers.CreateUserHandler())
 
 			// 商城相关公开路由
@@ -70,6 +71,8 @@ func SetupRoutes(r *gin.Engine) {
 			// 代理系统相关路由
 			protected.GET("/agents/:user_id/users", controllers.GetAgentUsersHandler())
 			protected.GET("/agents/:user_id/sales", controllers.GetAgentSalesHandler())
+			protected.GET("/agents/:user_id/commission/dashboard", controllers.GetAgentCommissionDashboardHandler())
+			protected.GET("/agents/:user_id/commission/details", controllers.GetAgentCommissionDetailsHandler())
 			protected.POST("/agents/:user_id/withdraw", controllers.WithdrawCommissionHandler())
 
 			// 商城相关路由（简化，只保留必要的）

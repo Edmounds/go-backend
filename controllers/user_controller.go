@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
 	"miniprogram/models"
 	"time"
 
@@ -38,7 +37,6 @@ type UpdateUserRequest struct {
 	Phone        string `json:"phone,omitempty"`
 	City         string `json:"city,omitempty"`
 	AgentLevel   int    `json:"agent_level,omitempty"`
-	AgentType    string `json:"agent_type,omitempty"`
 }
 
 // AddressRequest 地址请求
@@ -252,18 +250,7 @@ func UpdateUserHandler() gin.HandlerFunc {
 			updateData["agent_level"] = req.AgentLevel
 			updateData["is_agent"] = true
 		}
-		if req.AgentType != "" {
-			// 验证代理类型是否有效
-			validAgentTypes := map[string]bool{
-				"school": true,
-				"region": true,
-			}
-			if !validAgentTypes[req.AgentType] {
-				BadRequestResponse(c, "无效的代理类型", errors.New("agent_type must be 'school' or 'region'"))
-				return
-			}
-			updateData["agent_type"] = req.AgentType
-		}
+
 		if req.UserPassword != "" {
 			hashedPassword, err := HashPassword(req.UserPassword)
 			if err != nil {

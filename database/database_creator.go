@@ -137,8 +137,8 @@ func (dc *DatabaseCreator) CreateUsersCollection(ctx context.Context) error {
 			"current_unit":  "Unit 1",
 			"learned_words": bson.A{"hello", "how", "are", "you"},
 		},
-		"is_agent":        false,
-		"agent_type":      nil,
+		"is_agent": false,
+
 		"managed_schools": bson.A{},
 		"managed_regions": bson.A{},
 		"created_at":      time.Now(),

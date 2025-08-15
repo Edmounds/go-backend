@@ -200,3 +200,58 @@ func GetCachedAccessToken() (string, error) {
 	accessTokenCache.expireAt = expireAt
 	return token, nil
 }
+
+// DevLoginRequest 开发环境登录请求
+type DevLoginRequest struct {
+	OpenID string `json:"openid" binding:"required"`
+}
+
+// DevLoginHandler 开发环境登录处理器 - 仅用于测试
+func DevLoginHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req DevLoginRequest
+
+		// 绑定请求参数
+		if err := c.ShouldBindJSON(&req); err != nil {
+			panic("请求参数错误: " + err.Error())
+		}
+
+		openID := req.OpenID
+
+		// 根据openid查找用户
+		user, _ := GetUserByOpenID(openID)
+
+		if user == nil {
+			// 如果用户不存在，创建一个只有openid的新用户
+			newUser := &models.User{
+				OpenID:    openID,
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			}
+
+			err := CreateUser(newUser)
+			if err != nil {
+				panic("创建用户失败: " + err.Error())
+			}
+
+			user = newUser
+		}
+
+		// 生成JWT token
+		tokenUser := middlewares.User{
+			UserName:     user.UserName,
+			UserId:       user.OpenID,
+			UserPassword: user.UserPassword,
+			OpenID:       user.OpenID,
+		}
+
+		token, err := middlewares.GenerateToken(tokenUser)
+		middlewares.HandleError(err, "生成token失败", false)
+
+		// 使用统一响应格式
+		SuccessResponse(c, "开发环境登录成功", gin.H{
+			"token": token,
+			"user":  user,
+		})
+	}
+}

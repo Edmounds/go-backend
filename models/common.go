@@ -24,11 +24,11 @@ type User struct {
 	Addresses      []Address          `bson:"addresses" json:"addresses"`
 	Progress       Progress           `bson:"progress" json:"progress"`
 	IsAgent        bool               `bson:"is_agent" json:"is_agent"`
-	AgentType      string             `bson:"agent_type" json:"agent_type"`
-	ManagedSchools []string           `bson:"managed_schools" json:"managed_schools"`
-	ManagedRegions []string           `bson:"managed_regions" json:"managed_regions"`
-	CreatedAt      time.Time          `bson:"created_at" json:"created_at"`
-	UpdatedAt      time.Time          `bson:"updated_at" json:"updated_at"`
+
+	ManagedSchools []string  `bson:"managed_schools" json:"managed_schools"`
+	ManagedRegions []string  `bson:"managed_regions" json:"managed_regions"`
+	CreatedAt      time.Time `bson:"created_at" json:"created_at"`
+	UpdatedAt      time.Time `bson:"updated_at" json:"updated_at"`
 }
 
 // Progress 学习进度结构体

@@ -4,6 +4,7 @@ import (
 	"context"
 	"miniprogram/models"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -157,6 +158,159 @@ func GetAgentStatistics(agent *models.User) (map[string]interface{}, error) {
 		"new_users_month": newUsersThisMonth,
 		"total_revenue":   totalRevenue,
 		"total_orders":    totalOrders,
+	}, nil
+}
+
+// GetAgentCommissionDashboard 获取代理佣金仪表板数据
+func GetAgentCommissionDashboard(openID string) (map[string]interface{}, error) {
+	now := time.Now()
+
+	// 今日开始时间
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	// 本月开始时间
+	thisMonthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+
+	// 上月开始时间
+	lastMonthStart := thisMonthStart.AddDate(0, -1, 0)
+	lastMonthEnd := thisMonthStart.Add(-time.Second)
+
+	// 获取今日佣金
+	todayCommissions, err := GetCommissionsByDateRange(openID, todayStart, now)
+	if err != nil {
+		return nil, err
+	}
+
+	todayIncome := 0.0
+	for _, commission := range todayCommissions {
+		if commission.Status == "paid" {
+			todayIncome += commission.Amount
+		}
+	}
+
+	// 获取本月佣金
+	thisMonthCommissions, err := GetCommissionsByDateRange(openID, thisMonthStart, now)
+	if err != nil {
+		return nil, err
+	}
+
+	thisMonthIncome := 0.0
+	for _, commission := range thisMonthCommissions {
+		if commission.Status == "paid" {
+			thisMonthIncome += commission.Amount
+		}
+	}
+
+	// 获取上月佣金
+	lastMonthCommissions, err := GetCommissionsByDateRange(openID, lastMonthStart, lastMonthEnd)
+	if err != nil {
+		return nil, err
+	}
+
+	lastMonthIncome := 0.0
+	for _, commission := range lastMonthCommissions {
+		if commission.Status == "paid" {
+			lastMonthIncome += commission.Amount
+		}
+	}
+
+	// 计算月度对比
+	monthComparison := 0.0
+	if lastMonthIncome > 0 {
+		monthComparison = ((thisMonthIncome - lastMonthIncome) / lastMonthIncome) * 100
+	} else if thisMonthIncome > 0 {
+		monthComparison = 100.0
+	}
+
+	// 获取可提取佣金
+	availableCommission, err := GetAvailableCommission(openID)
+	if err != nil {
+		availableCommission = 0.0
+	}
+
+	return map[string]interface{}{
+		"today_income":         todayIncome,
+		"this_month_income":    thisMonthIncome,
+		"last_month_income":    lastMonthIncome,
+		"month_comparison":     monthComparison,
+		"available_commission": availableCommission,
+		"total_commissions":    len(thisMonthCommissions),
+	}, nil
+}
+
+// GetCommissionsByDateRange 根据时间范围获取佣金记录
+func GetCommissionsByDateRange(openID string, startDate, endDate time.Time) ([]models.Commission, error) {
+	collection := GetCollection("commissions")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{
+		"user_openid": openID,
+		"date": bson.M{
+			"$gte": startDate,
+			"$lte": endDate,
+		},
+	}
+
+	opts := options.Find().SetSort(bson.D{{Key: "date", Value: -1}})
+	cursor, err := collection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var commissions []models.Commission
+	if err = cursor.All(ctx, &commissions); err != nil {
+		return nil, err
+	}
+
+	return commissions, nil
+}
+
+// GetAgentCommissionDetails 获取代理佣金明细数据（按月统计）
+func GetAgentCommissionDetails(openID string, months int) (map[string]interface{}, error) {
+	now := time.Now()
+	var monthlyData []map[string]interface{}
+
+	for i := months - 1; i >= 0; i-- {
+		// 计算每个月的开始和结束时间
+		monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).AddDate(0, -i, 0)
+		monthEnd := monthStart.AddDate(0, 1, 0).Add(-time.Second)
+
+		// 获取该月佣金
+		commissions, err := GetCommissionsByDateRange(openID, monthStart, monthEnd)
+		if err != nil {
+			continue
+		}
+
+		monthIncome := 0.0
+		for _, commission := range commissions {
+			if commission.Status == "paid" {
+				monthIncome += commission.Amount
+			}
+		}
+
+		monthlyData = append(monthlyData, map[string]interface{}{
+			"month":       monthStart.Format("2006年1月"),
+			"month_code":  monthStart.Format("2006-01"),
+			"income":      monthIncome,
+			"commissions": len(commissions),
+		})
+	}
+
+	// 计算总收入
+	totalIncome := 0.0
+	totalCommissions := 0
+	for _, data := range monthlyData {
+		totalIncome += data["income"].(float64)
+		totalCommissions += data["commissions"].(int)
+	}
+
+	return map[string]interface{}{
+		"monthly_data":      monthlyData,
+		"total_income":      totalIncome,
+		"total_commissions": totalCommissions,
+		"period_months":     months,
 	}, nil
 }
 
@@ -468,27 +622,16 @@ func GetAgentUsersHandler() gin.HandlerFunc {
 				totalSpent = 0.0
 			}
 
-			// 确定代理类型显示
-			agentType := "普通用户"
-			if user.IsAgent {
-				switch user.AgentLevel {
-				case 1:
-					agentType = "校代理"
-				case 2:
-					agentType = "区域代理"
-				}
-			}
-
 			usersData = append(usersData, gin.H{
-				"_id":           user.ID,
-				"openID":        user.OpenID,
-				"user_name":     user.UserName,
-				"school":        user.School,
-				"city":          user.City,
-				"age":           user.Age,
-				"phone":         user.Phone,
-				"agent_level":   user.AgentLevel,
-				"agent_type":    agentType,
+				"_id":         user.ID,
+				"openID":      user.OpenID,
+				"user_name":   user.UserName,
+				"school":      user.School,
+				"city":        user.City,
+				"age":         user.Age,
+				"phone":       user.Phone,
+				"agent_level": user.AgentLevel,
+
 				"referral_code": user.ReferralCode,
 				"created_at":    user.CreatedAt.Format(time.RFC3339),
 				"updated_at":    user.UpdatedAt.Format(time.RFC3339),
@@ -510,20 +653,13 @@ func GetAgentUsersHandler() gin.HandlerFunc {
 		}
 
 		// 5. 构建代理信息
-		agentTypeStr := "普通用户"
-		switch agent.AgentLevel {
-		case 1:
-			agentTypeStr = "校代理"
-		case 2:
-			agentTypeStr = "区域代理"
-		}
 
 		SuccessResponse(c, "获取管理用户列表成功", gin.H{
 			"users":       usersData,
 			"total_users": len(managedUsers),
 			"agent_info": gin.H{
-				"agent_level":     agent.AgentLevel,
-				"agent_type":      agentTypeStr,
+				"agent_level": agent.AgentLevel,
+
 				"managed_schools": agent.ManagedSchools,
 				"managed_regions": agent.ManagedRegions,
 			},
@@ -555,6 +691,68 @@ func GetAgentSalesHandler() gin.HandlerFunc {
 		}
 
 		SuccessResponse(c, "获取销售数据成功", salesData)
+	}
+}
+
+// GetAgentCommissionDashboardHandler 获取代理佣金仪表板处理器
+func GetAgentCommissionDashboardHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 获取 user_id 参数，注意：这里的 user_id 实际上是微信的 openID
+		openID := c.Param("user_id")
+
+		// 1. 验证用户是否为代理
+		_, err := IsValidAgent(openID)
+		if err != nil {
+			ErrorResponse(c, http.StatusForbidden, 403, "用户不是代理或权限不足", err)
+			return
+		}
+
+		// 2. 获取代理佣金仪表板数据
+		dashboardData, err := GetAgentCommissionDashboard(openID)
+		if err != nil {
+			InternalServerErrorResponse(c, "获取佣金仪表板数据失败", err)
+			return
+		}
+
+		SuccessResponse(c, "获取佣金仪表板数据成功", dashboardData)
+	}
+}
+
+// GetAgentCommissionDetailsHandler 获取代理佣金明细处理器
+func GetAgentCommissionDetailsHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 获取 user_id 参数，注意：这里的 user_id 实际上是微信的 openID
+		openID := c.Param("user_id")
+
+		// 获取查询参数
+		monthsParam := c.DefaultQuery("months", "6") // 默认查询6个月
+		months := 6
+		if m, err := strconv.Atoi(monthsParam); err == nil {
+			months = m
+		}
+		// 限制查询范围
+		if months < 1 {
+			months = 1
+		}
+		if months > 12 {
+			months = 12
+		}
+
+		// 1. 验证用户是否为代理
+		_, err := IsValidAgent(openID)
+		if err != nil {
+			ErrorResponse(c, http.StatusForbidden, 403, "用户不是代理或权限不足", err)
+			return
+		}
+
+		// 2. 获取代理佣金明细数据
+		detailsData, err := GetAgentCommissionDetails(openID, months)
+		if err != nil {
+			InternalServerErrorResponse(c, "获取佣金明细数据失败", err)
+			return
+		}
+
+		SuccessResponse(c, "获取佣金明细数据成功", detailsData)
 	}
 }
 
