@@ -140,6 +140,7 @@ func searchOrders(ctx context.Context, query string, skip, limit int, response *
 	collection := GetCollection("orders")
 
 	// 获取用户信息 - 只能搜索当前用户的订单
+	// 注意：这里的 user_id 实际上是微信的 openID，不是 MongoDB 的 _id
 	userID := c.Param("user_id")
 	if userID == "" {
 		// 如果没有用户ID，尝试从查询参数获取

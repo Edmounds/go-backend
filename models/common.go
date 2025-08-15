@@ -169,12 +169,16 @@ type WithdrawRecord struct {
 	Amount           float64            `bson:"amount" json:"amount"`
 	WithdrawMethod   string             `bson:"withdraw_method" json:"withdraw_method"`
 	AccountInfo      AccountInfo        `bson:"account_info" json:"account_info"`
-	Status           string             `bson:"status" json:"status"` // pending, processing, completed, rejected
+	Status           string             `bson:"status" json:"status"` // pending, processing, completed, rejected, failed
 	ProcessingFee    float64            `bson:"processing_fee" json:"processing_fee"`
 	ActualAmount     float64            `bson:"actual_amount" json:"actual_amount"`
 	EstimatedArrival time.Time          `bson:"estimated_arrival" json:"estimated_arrival"`
 	CompletedAt      time.Time          `bson:"completed_at,omitempty" json:"completed_at,omitempty"`
 	RejectionReason  string             `bson:"rejection_reason,omitempty" json:"rejection_reason,omitempty"`
+	FailureReason    string             `bson:"failure_reason,omitempty" json:"failure_reason,omitempty"`   // 微信转账失败原因
+	WechatBatchID    string             `bson:"wechat_batch_id,omitempty" json:"wechat_batch_id,omitempty"` // 微信转账批次ID
+	OutBatchNo       string             `bson:"out_batch_no,omitempty" json:"out_batch_no,omitempty"`       // 商户批次号
+	OutDetailNo      string             `bson:"out_detail_no,omitempty" json:"out_detail_no,omitempty"`     // 商户明细号
 	CreatedAt        time.Time          `bson:"created_at" json:"created_at"`
 	UpdatedAt        time.Time          `bson:"updated_at" json:"updated_at"`
 }
@@ -271,4 +275,114 @@ type Unit struct {
 	BookID    primitive.ObjectID `bson:"book_id" json:"book_id"`
 	CreatedAt time.Time          `bson:"created_at,omitempty" json:"created_at,omitempty"`
 	UpdatedAt time.Time          `bson:"updated_at,omitempty" json:"updated_at,omitempty"`
+}
+
+// ===== 请求/响应结构体定义 =====
+
+// 商店相关请求结构体
+// AddToCartRequest 添加到购物车请求
+type AddToCartRequest struct {
+	ProductID string `json:"product_id" binding:"required"`
+	Quantity  int    `json:"quantity" binding:"required,min=1"`
+}
+
+// UpdateCartRequest 更新购物车请求
+type UpdateCartRequest struct {
+	Quantity int `json:"quantity" binding:"required,min=1"`
+}
+
+// CreateOrderRequest 创建订单请求
+type CreateOrderRequest struct {
+	AddressID     string `json:"address_id" binding:"required"`
+	PaymentMethod string `json:"payment_method" binding:"required"`
+	ReferralCode  string `json:"referral_code"`
+}
+
+// 微信支付相关请求结构体
+// CreateWechatPayOrderRequest 创建微信支付订单请求
+type CreateWechatPayOrderRequest struct {
+	OrderID string `json:"order_id" binding:"required"`
+}
+
+// WechatPayOrder 微信支付订单结构体
+type WechatPayOrder struct {
+	PrepayId  string `json:"prepayId"`
+	TimeStamp string `json:"timeStamp"`
+	NonceStr  string `json:"nonceStr"`
+	Package   string `json:"package"`
+	SignType  string `json:"signType"`
+	PaySign   string `json:"paySign"`
+}
+
+// 认证相关请求/响应结构体
+// WechatLoginRequest 微信登录请求
+type WechatLoginRequest struct {
+	Code         string `json:"code" binding:"required"`
+	ReferralCode string `json:"referral_code,omitempty"` // 可选的推荐码参数，用于扫码进入的场景
+}
+
+// WechatLoginResponse 微信登录响应
+type WechatLoginResponse struct {
+	SessionKey string `json:"session_key"`
+	OpenID     string `json:"openid"`
+	UnionID    string `json:"unionid"`
+	ErrCode    int    `json:"errcode"`
+	ErrMsg     string `json:"errmsg"`
+}
+
+// LoginResponse 登录响应
+type LoginResponse struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    struct {
+		Token string      `json:"token"`
+		User  interface{} `json:"user"`
+	} `json:"data"`
+}
+
+// WechatAccessTokenResponse 微信访问令牌响应（内部使用）
+type WechatAccessTokenResponse struct {
+	AccessToken string `json:"access_token"`
+	ExpiresIn   int    `json:"expires_in"`
+	ErrCode     int    `json:"errcode"`
+	ErrMsg      string `json:"errmsg"`
+}
+
+// DevLoginRequest 开发登录请求
+type DevLoginRequest struct {
+	OpenID       string `json:"openID" binding:"required"`
+	ReferralCode string `json:"referral_code,omitempty"`
+}
+
+// 推荐相关请求结构体
+// TrackReferralRequest 跟踪推荐关系请求
+type TrackReferralRequest struct {
+	ReferralCode   string `json:"referral_code" binding:"required"`
+	ReferredUserID string `json:"referred_user_id" binding:"required"`
+}
+
+// ValidateReferralRequest 验证推荐码请求
+type ValidateReferralRequest struct {
+	ReferralCode string `json:"referral_code" binding:"required"`
+}
+
+// 进度相关请求结构体
+// UpdateProgressRequest 更新进度请求
+type UpdateProgressRequest struct {
+	CurrentUnit  string   `json:"current_unit" binding:"required"`
+	LearnedWords []string `json:"learned_words"`
+}
+
+// 代理相关请求结构体
+// WithdrawRequest 提取佣金请求
+type WithdrawRequest struct {
+	Amount         float64     `json:"amount" binding:"required,min=0.01"`
+	WithdrawMethod string      `json:"withdraw_method" binding:"required"`
+	AccountInfo    AccountInfo `json:"account_info"`
+}
+
+// 管理员相关请求结构体
+// UpdateAgentLevelRequest 更新代理等级请求
+type UpdateAgentLevelRequest struct {
+	AgentLevel int `json:"agent_level" binding:"required"`
 }

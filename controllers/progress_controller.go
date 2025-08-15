@@ -1,18 +1,17 @@
 package controllers
 
 import (
+	"fmt"
+	"miniprogram/middlewares"
+	"miniprogram/models"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
-
-// UpdateProgressRequest 更新学习进度请求
-type UpdateProgressRequest struct {
-	CurrentUnit  string   `json:"current_unit"`
-	LearnedWords []string `json:"learned_words"`
-}
 
 // GetProgressHandler 获取用户学习进度处理器
 func GetProgressHandler() gin.HandlerFunc {
@@ -20,8 +19,11 @@ func GetProgressHandler() gin.HandlerFunc {
 		// 获取 user_id 参数，注意：这里的 user_id 实际上是微信的 openID，不是 MongoDB 的 _id
 		openID := c.Param("user_id")
 
-		// 根据openID查询用户信息（只需要progress字段）
-		user, err := GetUserByOpenID(openID)
+		// 初始化用户服务
+		userService := GetUserService()
+
+		// 根据openID查询用户信息
+		user, err := userService.FindUserByOpenID(openID)
 		if err != nil {
 			NotFoundResponse(c, "用户不存在", err)
 			return
@@ -42,7 +44,7 @@ func UpdateProgressHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 获取 user_id 参数，注意：这里的 user_id 实际上是微信的 openID，不是 MongoDB 的 _id
 		openID := c.Param("user_id")
-		var req UpdateProgressRequest
+		var req models.UpdateProgressRequest
 
 		if err := c.ShouldBindJSON(&req); err != nil {
 			BadRequestResponse(c, "请求参数错误", err)
@@ -91,42 +93,23 @@ func GetBooksHandler() gin.HandlerFunc {
 		page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 		limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 
-		// TODO: 实现书籍列表查询逻辑
-		// 1. 从数据库获取书籍列表
-		// 2. 实现分页
-		// 3. 返回书籍信息
+		// 从数据库获取书籍列表
+		books, total, err := GetBooksList(page, limit)
+		if err != nil {
+			if middlewares.HandleError(err, "获取书籍列表失败", false) {
+				InternalServerErrorResponse(c, "获取书籍列表失败", err)
+				return
+			}
+		}
+
+		totalPages := (total + int64(limit) - 1) / int64(limit)
 
 		SuccessResponse(c, "获取书籍列表成功", gin.H{
-			"books": []gin.H{
-				{
-					"_id":              "BOOK001",
-					"title":            "大学英语四级词汇",
-					"description":      "涵盖大学英语四级考试所需的核心词汇，包含详细释义和例句",
-					"level":            "intermediate",
-					"total_words":      2000,
-					"units":            20,
-					"cover_image":      "https://example.com/book1_cover.jpg",
-					"author":           "英语教学专家组",
-					"publisher":        "教育出版社",
-					"publication_date": "2023-01-01",
-				},
-				{
-					"_id":              "BOOK002",
-					"title":            "高中英语核心词汇",
-					"description":      "高中阶段必备英语词汇，按主题分类学习",
-					"level":            "beginner",
-					"total_words":      1500,
-					"units":            15,
-					"cover_image":      "https://example.com/book2_cover.jpg",
-					"author":           "高中英语教研组",
-					"publisher":        "学习出版社",
-					"publication_date": "2023-03-01",
-				},
-			},
+			"books": books,
 			"pagination": gin.H{
 				"current_page":   page,
-				"total_pages":    3,
-				"total_items":    5,
+				"total_pages":    totalPages,
+				"total_items":    total,
 				"items_per_page": limit,
 			},
 		})
@@ -139,54 +122,117 @@ func GetBookWordsHandler() gin.HandlerFunc {
 		bookID := c.Param("book_id")
 		unitID := c.Query("unit_id")
 
-		// TODO: 实现书籍单词查询逻辑
-		// 1. 根据书籍ID查询单词
-		// 2. 根据单元ID筛选（如果提供）
-		// 3. 返回单词列表
-
-		// 构建响应数据，根据是否提供unitID来筛选结果
-		var unitFilter string
-		if unitID != "" {
-			unitFilter = unitID
-		} else {
-			unitFilter = "UNIT001" // 默认单元
+		// 从数据库获取书籍单词
+		words, unitInfo, err := GetBookWords(bookID, unitID)
+		if err != nil {
+			if middlewares.HandleError(err, "获取单词列表失败", false) {
+				InternalServerErrorResponse(c, "获取单词列表失败", err)
+				return
+			}
 		}
 
 		SuccessResponse(c, "获取单词列表成功", gin.H{
-			"words": []gin.H{
-				{
-					"_id":           "WORD001",
-					"word":          "computer",
-					"pronunciation": "/kəmˈpjuːtər/",
-					"definition":    "电子计算机，电脑",
-					"example_sentences": []string{
-						"I use my computer every day for work.",
-						"The computer is running slowly today.",
-					},
-					"difficulty": "basic",
-					"unit_id":    unitFilter,
-					"book_id":    bookID,
-				},
-				{
-					"_id":           "WORD002",
-					"word":          "technology",
-					"pronunciation": "/tekˈnɒlədʒi/",
-					"definition":    "技术，科技",
-					"example_sentences": []string{
-						"Technology has changed our lives.",
-						"Modern technology is advancing rapidly.",
-					},
-					"difficulty": "intermediate",
-					"unit_id":    unitFilter,
-					"book_id":    bookID,
-				},
-			},
-			"total_count": 50,
-			"unit_info": gin.H{
-				"unit_id":     unitFilter,
-				"unit_name":   "科技与生活",
-				"total_words": 50,
-			},
+			"words":       words,
+			"total_count": len(words),
+			"unit_info":   unitInfo,
 		})
 	}
+}
+
+// ===== 数据库操作函数 =====
+
+// GetBooksList 获取书籍列表
+func GetBooksList(page, limit int) ([]models.Book, int64, error) {
+	collection := GetCollection("books")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	// 计算跳过的文档数
+	skip := (page - 1) * limit
+
+	// 设置查询选项
+	opts := options.Find().
+		SetSkip(int64(skip)).
+		SetLimit(int64(limit)).
+		SetSort(bson.D{{Key: "created_at", Value: -1}}) // 按创建时间倒序
+
+	// 执行查询
+	cursor, err := collection.Find(ctx, bson.M{}, opts)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer cursor.Close(ctx)
+
+	var books []models.Book
+	if err = cursor.All(ctx, &books); err != nil {
+		return nil, 0, err
+	}
+
+	// 获取总数
+	total, err := collection.CountDocuments(ctx, bson.M{})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return books, total, nil
+}
+
+// GetBookWords 获取书籍单词
+func GetBookWords(bookID, unitID string) ([]models.Word, map[string]interface{}, error) {
+	wordsCollection := GetCollection("words")
+	unitsCollection := GetCollection("units")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	// 构建查询条件
+	filter := bson.M{}
+
+	// 添加书籍ID过滤条件
+	if bookID != "" {
+		bookObjectID, err := primitive.ObjectIDFromHex(bookID)
+		if err != nil {
+			return nil, nil, fmt.Errorf("无效的书籍ID: %v", err)
+		}
+		filter["book_id"] = bookObjectID
+	}
+
+	// 添加单元ID过滤条件
+	var unitObjectID primitive.ObjectID
+	if unitID != "" {
+		var err error
+		unitObjectID, err = primitive.ObjectIDFromHex(unitID)
+		if err != nil {
+			return nil, nil, fmt.Errorf("无效的单元ID: %v", err)
+		}
+		filter["unit_id"] = unitObjectID
+	}
+
+	// 查询单词
+	cursor, err := wordsCollection.Find(ctx, filter)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var words []models.Word
+	if err = cursor.All(ctx, &words); err != nil {
+		return nil, nil, err
+	}
+
+	// 获取单元信息
+	unitInfo := map[string]interface{}{
+		"unit_id":     unitID,
+		"unit_name":   "",
+		"total_words": len(words),
+	}
+
+	if unitID != "" {
+		var unit models.Unit
+		err = unitsCollection.FindOne(ctx, bson.M{"_id": unitObjectID}).Decode(&unit)
+		if err == nil {
+			unitInfo["unit_name"] = unit.UnitName
+		}
+	}
+
+	return words, unitInfo, nil
 }

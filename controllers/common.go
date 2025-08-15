@@ -2,6 +2,8 @@ package controllers
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"log"
 	"miniprogram/config"
 	"net/http"
@@ -80,7 +82,7 @@ var mongoClient *mongo.Client
 // InitMongoDB 初始化MongoDB连接
 func InitMongoDB() {
 	// 创建一个带有超时的上下文
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := CreateDBContext()
 	defer cancel()
 
 	// 从配置文件获取MongoDB连接字符串
@@ -129,4 +131,37 @@ func HealthCheckHandler() gin.HandlerFunc {
 			"status": "ok",
 		})
 	}
+}
+
+// ===== 公共工具函数 =====
+
+// GenerateRandomString 生成指定长度的随机字符串
+func GenerateRandomString(length int) string {
+	bytes := make([]byte, length/2)
+	rand.Read(bytes)
+	return hex.EncodeToString(bytes)
+}
+
+// CalculateCommissionRate 根据代理等级计算佣金率
+func CalculateCommissionRate(agentLevel int) float64 {
+	switch agentLevel {
+	case 0: // 普通用户
+		return 0.01 // 1%佣金
+	case 1: // 校代理
+		return 0.03 // 3%佣金
+	case 2: // 区域代理
+		return 0.05 // 5%佣金
+	default:
+		return 0.01 // 默认1%佣金
+	}
+}
+
+// GenerateWithdrawID 生成提现ID
+func GenerateWithdrawID() string {
+	return "WD" + time.Now().Format("20060102150405") + GenerateRandomString(4)
+}
+
+// GenerateCommissionID 生成佣金ID
+func GenerateCommissionID() string {
+	return "COMM" + time.Now().Format("20060102150405") + GenerateRandomString(4)
 }
