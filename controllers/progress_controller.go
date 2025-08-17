@@ -29,9 +29,9 @@ func GetProgressHandler() gin.HandlerFunc {
 			return
 		}
 
-		// 返回用户的学习进度信息
+		// 返回用户的学习进度信息（移除敏感的openID信息）
 		SuccessResponse(c, "获取学习进度成功", gin.H{
-			"openID":        openID,
+			"user_id":       utils.EncodeOpenIDToSafeID(openID), // 使用安全的用户标识符
 			"current_unit":  user.Progress.CurrentUnit,
 			"learned_words": user.Progress.LearnedWords,
 			"total_words":   len(user.Progress.LearnedWords),
@@ -79,7 +79,7 @@ func UpdateProgressHandler() gin.HandlerFunc {
 		}
 
 		SuccessResponse(c, "学习进度更新成功", gin.H{
-			"openID":        openID,
+			"user_id":       utils.EncodeOpenIDToSafeID(openID), // 使用安全的用户标识符
 			"current_unit":  req.CurrentUnit,
 			"learned_words": req.LearnedWords,
 			"total_words":   len(req.LearnedWords),

@@ -293,18 +293,17 @@ func (s *AgentCommissionService) GetCommissionDetails(openID string, months int)
 				monthIncome += commission.Amount
 			}
 
-			// 添加详细的佣金记录信息
+			// 添加详细的佣金记录信息（移除敏感的openID信息）
 			commissionDetails = append(commissionDetails, map[string]interface{}{
-				"commission_id":        commission.CommissionID,
-				"amount":               commission.Amount,
-				"status":               commission.Status,
-				"type":                 commission.Type,
-				"description":          commission.Description,
-				"order_id":             commission.OrderID,
-				"referred_user_openid": commission.ReferredUserOpenID,
-				"referred_user_name":   commission.ReferredUserName,
-				"date":                 commission.Date.Format(time.RFC3339),
-				"created_at":           commission.CreatedAt.Format(time.RFC3339),
+				"commission_id":      commission.CommissionID,
+				"amount":             commission.Amount,
+				"status":             commission.Status,
+				"type":               commission.Type,
+				"description":        commission.Description,
+				"order_id":           commission.OrderID,
+				"referred_user_name": commission.ReferredUserName, // 只保留用户名，移除openID
+				"date":               commission.Date.Format(time.RFC3339),
+				"created_at":         commission.CreatedAt.Format(time.RFC3339),
 			})
 		}
 

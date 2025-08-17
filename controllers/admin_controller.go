@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"miniprogram/models"
+	"miniprogram/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,7 +32,7 @@ func UpdateAgentLevelHandler() gin.HandlerFunc {
 		}
 
 		SuccessResponse(c, "代理等级更新成功", gin.H{
-			"openID":      openID,
+			"user_id":     utils.EncodeOpenIDToSafeID(openID), // 使用安全的用户标识符
 			"agent_level": req.AgentLevel,
 			"is_agent":    req.AgentLevel > 0,
 		})

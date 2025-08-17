@@ -3,6 +3,7 @@ package controllers
 import (
 	"log"
 	"miniprogram/models"
+	"miniprogram/utils"
 	"net/http"
 	"strconv"
 	"time"
@@ -65,7 +66,7 @@ func GetAgentUsersHandler() gin.HandlerFunc {
 
 			usersData = append(usersData, gin.H{
 				"_id":         user.ID,
-				"openID":      user.OpenID,
+				"user_id":     utils.EncodeOpenIDToSafeID(user.OpenID), // 使用安全的用户标识符
 				"user_name":   user.UserName,
 				"school":      user.School,
 				"city":        user.City,

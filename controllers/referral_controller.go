@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"miniprogram/models"
+	"miniprogram/utils"
 	"net/http"
 	"time"
 
@@ -125,10 +126,10 @@ func GetReferralInfoHandler() gin.HandlerFunc {
 		referral, err := referralService.GetReferralByUserID(user.OpenID)
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
-				// 如果没有推荐记录，创建默认响应
+				// 如果没有推荐记录，创建默认响应（移除敏感的openID信息）
 				SuccessResponse(c, "获取推荐信息成功", gin.H{
 					"_id":                  user.ID,
-					"openID":               openID,
+					"user_id":              utils.EncodeOpenIDToSafeID(openID), // 使用安全的用户标识符
 					"referral_code":        user.ReferralCode,
 					"total_referrals":      0,
 					"successful_referrals": 0,
@@ -167,27 +168,26 @@ func GetReferralInfoHandler() gin.HandlerFunc {
 			})
 		}
 
-		// 6. 准备佣金详情（订单和被推荐用户信息）
+		// 6. 准备佣金详情（移除敏感的openID信息）
 		var commissionDetails []gin.H
 		for _, commission := range commissions {
 			commissionDetails = append(commissionDetails, gin.H{
-				"commission_id":        commission.CommissionID,
-				"amount":               commission.Amount,
-				"status":               commission.Status,
-				"type":                 commission.Type,
-				"description":          commission.Description,
-				"order_id":             commission.OrderID,
-				"referred_user_openid": commission.ReferredUserOpenID,
-				"referred_user_name":   commission.ReferredUserName,
-				"date":                 commission.Date.Format(time.RFC3339),
-				"created_at":           commission.CreatedAt.Format(time.RFC3339),
+				"commission_id":      commission.CommissionID,
+				"amount":             commission.Amount,
+				"status":             commission.Status,
+				"type":               commission.Type,
+				"description":        commission.Description,
+				"order_id":           commission.OrderID,
+				"referred_user_name": commission.ReferredUserName, // 只保留用户名，移除openID
+				"date":               commission.Date.Format(time.RFC3339),
+				"created_at":         commission.CreatedAt.Format(time.RFC3339),
 			})
 		}
 
-		// 7. 构建响应数据
+		// 7. 构建响应数据（移除敏感的openID信息）
 		SuccessResponse(c, "获取推荐信息成功", gin.H{
 			"_id":                  user.ID,
-			"openID":               openID,
+			"user_id":              utils.EncodeOpenIDToSafeID(openID), // 使用安全的用户标识符
 			"referral_code":        user.ReferralCode,
 			"total_referrals":      len(referral.UsedBy),
 			"successful_referrals": len(referral.UsedBy), // 可以根据状态进一步筛选
@@ -283,11 +283,10 @@ func ValidateReferralCodeHandler() gin.HandlerFunc {
 		// 2. 计算折扣率
 		discountRate := referralService.CalculateDiscountRate(referrer.AgentLevel)
 
-		// 3. 返回验证结果
+		// 3. 返回验证结果（移除敏感的openID信息）
 		SuccessResponse(c, "推荐码验证成功", gin.H{
 			"valid": true,
 			"referrer": gin.H{
-				"openID":      referrer.OpenID,
 				"user_name":   referrer.UserName,
 				"agent_level": referrer.AgentLevel,
 			},
@@ -335,13 +334,13 @@ func GetCommissionsHandler() gin.HandlerFunc {
 			}
 		}
 
-		// 5. 准备响应数据
+		// 5. 准备响应数据（移除敏感的openID信息）
 		var commissionsData []gin.H
 		for _, commission := range commissions {
 			commissionsData = append(commissionsData, gin.H{
 				"_id":           commission.ID,
 				"commission_id": commission.CommissionID,
-				"openID":        openID, // 从参数中获取，保持响应格式一致
+				"user_id":       utils.EncodeOpenIDToSafeID(openID), // 使用安全的用户标识符
 				"amount":        commission.Amount,
 				"date":          commission.Date.Format(time.RFC3339),
 				"status":        commission.Status,
