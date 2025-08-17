@@ -1,7 +1,13 @@
 package controllers
 
 import (
+	"fmt"
+	"io"
+	"mime/multipart"
 	"miniprogram/models"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -420,4 +426,149 @@ func CheckCardCollectedHandler() gin.HandlerFunc {
 			"is_collected": isCollected,
 		})
 	}
+}
+
+// ===== 头像上传功能处理器 =====
+
+// UploadAvatarHandler 上传头像处理器
+func UploadAvatarHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		openID := c.Param("user_id")
+
+		// 获取上传的文件
+		file, header, err := c.Request.FormFile("avatar")
+		if err != nil {
+			BadRequestResponse(c, "获取上传文件失败", err)
+			return
+		}
+		defer file.Close()
+
+		// 验证文件大小（2MB限制）
+		const maxFileSize = 2 * 1024 * 1024 // 2MB
+		if header.Size > maxFileSize {
+			BadRequestResponse(c, "文件大小超过2MB限制", nil)
+			return
+		}
+
+		// 验证文件格式
+		if err := validateImageFormat(header); err != nil {
+			BadRequestResponse(c, err.Error(), err)
+			return
+		}
+
+		// 获取文件扩展名
+		ext := getFileExtension(header.Filename)
+
+		// 保存文件
+		avatarPath, err := saveAvatarFile(file, openID, ext)
+		if err != nil {
+			InternalServerErrorResponse(c, "保存头像文件失败", err)
+			return
+		}
+
+		// 更新用户头像路径
+		userService := GetUserService()
+		err = userService.UpdateUserAvatar(openID, avatarPath)
+		if err != nil {
+			InternalServerErrorResponse(c, "更新用户头像信息失败", err)
+			return
+		}
+
+		SuccessResponse(c, "头像上传成功", gin.H{
+			"avatar_path": avatarPath,
+			"user_id":     openID,
+		})
+	}
+}
+
+// GetUserQRCodeHandler 获取用户二维码处理器
+func GetUserQRCodeHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		openID := c.Param("user_id")
+
+		// 获取用户信息
+		userService := GetUserService()
+		user, err := userService.FindUserByOpenID(openID)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				NotFoundResponse(c, "用户不存在", err)
+			} else {
+				InternalServerErrorResponse(c, "获取用户信息失败", err)
+			}
+			return
+		}
+
+		// 检查是否有二维码
+		if user.QRCode == "" {
+			NotFoundResponse(c, "用户二维码不存在", nil)
+			return
+		}
+
+		SuccessResponse(c, "获取小程序码成功", gin.H{
+			"qr_code": user.QRCode,
+			"scene":   user.ReferralCode,
+		})
+	}
+}
+
+// ===== 头像上传辅助函数 =====
+
+// validateImageFormat 验证图片格式
+func validateImageFormat(header *multipart.FileHeader) error {
+	// 获取文件扩展名
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+
+	// 支持的格式
+	supportedFormats := map[string]bool{
+		".jpg":  true,
+		".jpeg": true,
+		".png":  true,
+		".webp": true,
+	}
+
+	if !supportedFormats[ext] {
+		return fmt.Errorf("不支持的文件格式，只支持 jpg、png、webp 格式")
+	}
+
+	return nil
+}
+
+// getFileExtension 获取文件扩展名
+func getFileExtension(filename string) string {
+	ext := strings.ToLower(filepath.Ext(filename))
+	// 统一使用jpg格式
+	if ext == ".jpeg" {
+		return ".jpg"
+	}
+	return ext
+}
+
+// saveAvatarFile 保存头像文件
+func saveAvatarFile(file multipart.File, openID, ext string) (string, error) {
+	// 创建目标目录
+	avatarDir := "/www/wwwroot/miniprogram/image/avatar"
+	if err := os.MkdirAll(avatarDir, 0755); err != nil {
+		return "", fmt.Errorf("创建头像目录失败: %w", err)
+	}
+
+	// 构建文件名和路径
+	filename := openID + ext
+	fullPath := filepath.Join(avatarDir, filename)
+
+	// 创建目标文件
+	dst, err := os.Create(fullPath)
+	if err != nil {
+		return "", fmt.Errorf("创建目标文件失败: %w", err)
+	}
+	defer dst.Close()
+
+	// 复制文件内容
+	_, err = io.Copy(dst, file)
+	if err != nil {
+		return "", fmt.Errorf("保存文件失败: %w", err)
+	}
+
+	// 返回相对路径
+	relativePath := "/image/avatar/" + filename
+	return relativePath, nil
 }

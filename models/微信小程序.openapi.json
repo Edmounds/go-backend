@@ -510,6 +510,201 @@
         ]
       }
     },
+    "/api/users/{user_id}/avatar": {
+      "post": {
+        "summary": "上传头像",
+        "deprecated": false,
+        "description": "上传用户头像，支持jpg、png、webp格式，文件大小限制2MB",
+        "operationId": "post_users_user_id_avatar",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID（openID）",
+            "required": true,
+            "example": "ojmU85X2S0dMyA3XUZJnB3CXu6_8",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "avatar"
+                ],
+                "properties": {
+                  "avatar": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "头像文件（支持jpg、png、webp格式，最大2MB）"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "头像上传成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "头像上传成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "avatar_path": {
+                          "type": "string",
+                          "description": "头像文件路径",
+                          "example": "/image/avatar/ojmU85X2S0dMyA3XUZJnB3CXu6_8.jpg"
+                        },
+                        "user_id": {
+                          "type": "string",
+                          "description": "用户ID",
+                          "example": "ojmU85X2S0dMyA3XUZJnB3CXu6_8"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "请求错误（文件格式不支持、文件过大等）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "500": {
+            "description": "服务器内部错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/users/{user_id}/qrcode": {
+      "get": {
+        "summary": "获取用户二维码",
+        "deprecated": false,
+        "description": "获取用户推荐二维码的base64数据",
+        "operationId": "get_users_user_id_qrcode",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID（openID）",
+            "required": true,
+            "example": "ojmU85X2S0dMyA3XUZJnB3CXu6_8",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取小程序码成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "获取小程序码成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "qr_code": {
+                          "type": "string",
+                          "description": "二维码base64数据",
+                          "example": "data:image/jpeg;base64,eyJlcnJjb2RlIjo0MDA5NywiZXJybXNnIjoiaW52YWxpZCBhcmdzIHJpZDogNjhhMjI1NzUtNTFlYWRkMGEtMjI0YzM1NDIifQ=="
+                        },
+                        "scene": {
+                          "type": "string",
+                          "description": "二维码参数（推荐码）",
+                          "example": "123456"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "用户不存在或二维码不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "500": {
+            "description": "服务器内部错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/users/{user_id}/address": {
       "post": {
         "summary": "创建收货地址",
@@ -2612,6 +2807,45 @@
       }
     },
     "/api/users/{user_id}/cart": {
+      "get": {
+        "summary": "获取用户购物车",
+        "deprecated": false,
+        "description": "获取指定用户的购物车信息及商品列表",
+        "operationId": "get_users_user_id_cart",
+        "tags": [
+          "Store"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID（openID）",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取购物车成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
       "post": {
         "summary": "添加商品到购物车",
         "deprecated": false,
@@ -3317,6 +3551,16 @@
               "type": "string"
             },
             "description": "代理管理的地区（区域代理）"
+          },
+          "avatar": {
+            "type": "string",
+            "description": "用户头像路径",
+            "example": "/image/avatar/ojmU85X2S0dMyA3XUZJnB3CXu6_8.jpg"
+          },
+          "qr_code": {
+            "type": "string",
+            "description": "用户推荐二维码base64数据",
+            "example": "data:image/jpeg;base64,eyJlcnJjb2RlIjo0MDA5NywiZXJybXNnIjoiaW52YWxpZCBhcmdzIHJpZDogNjhhMjI1NzUtNTFlYWRkMGEtMjI0YzM1NDIifQ=="
           },
           "created_at": {
             "type": "string",

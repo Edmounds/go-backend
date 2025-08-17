@@ -30,6 +30,8 @@ type User struct {
 	AgentLevel     int                `bson:"agent_level" json:"agent_level"`
 	ReferralCode   string             `bson:"referral_code" json:"referral_code"`
 	ReferredBy     string             `bson:"referred_by" json:"referred_by"`
+	Avatar         string             `bson:"avatar" json:"avatar"`                   // 用户头像路径
+	QRCode         string             `bson:"qr_code" json:"qr_code"`                 // 用户推荐二维码base64数据
 	CollectedCards []CollectedCard    `bson:"collected_cards" json:"collected_cards"` // 收藏的单词卡列表
 	UnlockedBooks  []BookPermission   `bson:"unlocked_books" json:"unlocked_books"`   // 已解锁的书籍权限
 	Addresses      []Address          `bson:"addresses" json:"addresses"`

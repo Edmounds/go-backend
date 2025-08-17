@@ -46,6 +46,8 @@ func SetupRoutes(r *gin.Engine) {
 
 			// 用户管理路由
 			protected.GET("/users/:user_id", controllers.GetUserHandler())
+			protected.POST("/users/:user_id/avatar", controllers.UploadAvatarHandler())
+			protected.GET("/users/:user_id/qrcode", controllers.GetUserQRCodeHandler())
 
 			// 地址管理路由
 			protected.POST("/users/:user_id/address", controllers.CreateAddressHandler())
@@ -87,6 +89,7 @@ func SetupRoutes(r *gin.Engine) {
 			protected.POST("/agents/:user_id/withdraw", controllers.WithdrawCommissionHandler())
 
 			// 商城相关路由（简化，只保留必要的）
+			protected.GET("/users/:user_id/cart", controllers.GetCartHandler())
 			protected.POST("/users/:user_id/cart", controllers.AddToCartHandler())
 			protected.POST("/users/:user_id/orders", controllers.CreateOrderHandler())
 			protected.GET("/users/:user_id/orders", controllers.GetOrdersHandler())

@@ -1,13 +1,16 @@
 package controllers
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"miniprogram/config"
 	"miniprogram/models"
 	"miniprogram/utils"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
@@ -156,6 +159,18 @@ func (s *AuthService) createNewUserWithReferral(openID string, referralCode stri
 		}
 	}
 
+	// 生成用户推荐二维码
+	if newUser.ReferralCode != "" {
+		qrCode, err := s.generateUserQRCode(newUser.ReferralCode)
+		if err == nil {
+			// 更新用户二维码
+			userService := GetUserService()
+			userService.UpdateUserQRCode(newUser.OpenID, qrCode)
+			newUser.QRCode = qrCode
+		}
+		// 二维码生成失败不影响用户创建
+	}
+
 	return newUser, nil
 }
 
@@ -302,6 +317,58 @@ func (s *TokenService) GenerateTokenForUser(user *models.User) (string, error) {
 }
 
 // ===== 向后兼容函数 =====
+
+// generateUserQRCode 生成用户推荐二维码
+func (s *AuthService) generateUserQRCode(referralCode string) (string, error) {
+	// 获取微信访问令牌
+	tokenService := GetWechatAccessTokenService()
+	accessToken, err := tokenService.GetAccessToken()
+	if err != nil {
+		return "", fmt.Errorf("获取微信访问令牌失败: %w", err)
+	}
+
+	// 构建请求参数
+	requestData := models.UnlimitedQRCodeRequest{
+		Scene: referralCode,
+		Width: 280,
+	}
+
+	// 转换为JSON
+	jsonData, err := json.Marshal(requestData)
+	if err != nil {
+		return "", fmt.Errorf("构建请求参数失败: %w", err)
+	}
+
+	// 调用微信API生成小程序码
+	cfg := config.GetConfig()
+	apiURL := fmt.Sprintf("%s/wxa/getwxacodeunlimit?access_token=%s", cfg.WechatAPIURL, accessToken)
+
+	response, err := http.Post(apiURL, "application/json", strings.NewReader(string(jsonData)))
+	if err != nil {
+		return "", fmt.Errorf("调用微信API失败: %w", err)
+	}
+	defer response.Body.Close()
+
+	// 读取响应数据
+	responseData, err := io.ReadAll(response.Body)
+	if err != nil {
+		return "", fmt.Errorf("读取响应数据失败: %w", err)
+	}
+
+	// 检查是否是错误响应（JSON格式）
+	var errorResp map[string]interface{}
+	if json.Unmarshal(responseData, &errorResp) == nil {
+		if errCode, exists := errorResp["errcode"]; exists {
+			return "", fmt.Errorf("微信API错误: %v - %v", errCode, errorResp["errmsg"])
+		}
+	}
+
+	// 将图片数据转换为base64
+	base64Image := base64.StdEncoding.EncodeToString(responseData)
+	qrCodeData := "data:image/jpeg;base64," + base64Image
+
+	return qrCodeData, nil
+}
 
 // GetCachedAccessToken 获取已缓存的访问令牌 (向后兼容)
 func GetCachedAccessToken() (string, error) {

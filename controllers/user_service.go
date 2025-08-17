@@ -615,6 +615,60 @@ func CheckPassword(hashedPassword, password string) bool {
 	return service.CheckPassword(hashedPassword, password)
 }
 
+// UpdateUserAvatar 更新用户头像
+func (s *UserService) UpdateUserAvatar(openID, avatarPath string) error {
+	collection := GetCollection("users")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	// 更新用户头像字段
+	filter := bson.M{"openID": openID}
+	update := bson.M{
+		"$set": bson.M{
+			"avatar":     avatarPath,
+			"updated_at": utils.GetCurrentUTCTime(),
+		},
+	}
+
+	result, err := collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	if result.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+
+	return nil
+}
+
+// UpdateUserQRCode 更新用户二维码
+func (s *UserService) UpdateUserQRCode(openID, qrCode string) error {
+	collection := GetCollection("users")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	// 更新用户二维码字段
+	filter := bson.M{"openID": openID}
+	update := bson.M{
+		"$set": bson.M{
+			"qr_code":    qrCode,
+			"updated_at": utils.GetCurrentUTCTime(),
+		},
+	}
+
+	result, err := collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	if result.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+
+	return nil
+}
+
 // SetDefaultAddress 设置默认地址 (向后兼容)
 func SetDefaultAddress(openID string, defaultAddressID primitive.ObjectID) error {
 	service := GetAddressService()
