@@ -4,7 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"miniprogram/models"
-	"time"
+	"miniprogram/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -53,8 +53,8 @@ func (s *UserService) CreateUser(user *models.User) error {
 	user.ReferralCode = referralCode
 
 	// 设置创建时间
-	user.CreatedAt = time.Now()
-	user.UpdatedAt = time.Now()
+	user.CreatedAt = utils.GetCurrentUTCTime()
+	user.UpdatedAt = utils.GetCurrentUTCTime()
 
 	// 确保数组字段初始化
 	s.initializeUserArrays(user)
@@ -68,8 +68,23 @@ func (s *UserService) CreateUser(user *models.User) error {
 		user.UserPassword = hashedPassword
 	}
 
+	// 插入用户记录
 	_, err = collection.InsertOne(ctx, user)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// 创建对应的推荐码记录
+	referralService := NewReferralCodeService()
+	err = referralService.CreateReferralRecord(user.ReferralCode, user.OpenID)
+	if err != nil {
+		// 如果创建推荐码记录失败，需要回滚用户创建
+		// 但为了简化，这里只记录错误，不回滚
+		// 在实际生产环境中，应该使用事务来确保数据一致性
+		return err
+	}
+
+	return nil
 }
 
 // UpdateUser 更新用户信息
@@ -79,7 +94,7 @@ func (s *UserService) UpdateUser(openID string, updates map[string]interface{}) 
 	defer cancel()
 
 	// 添加更新时间
-	updates["updated_at"] = time.Now()
+	updates["updated_at"] = utils.GetCurrentUTCTime()
 
 	// 如果更新密码，进行加密
 	if password, ok := updates["user_password"].(string); ok && password != "" {
@@ -105,7 +120,10 @@ func (s *UserService) UpdateUser(openID string, updates map[string]interface{}) 
 // initializeUserArrays 确保用户的数组字段都初始化为空切片
 func (s *UserService) initializeUserArrays(user *models.User) {
 	if user.CollectedCards == nil {
-		user.CollectedCards = []string{}
+		user.CollectedCards = []models.CollectedCard{}
+	}
+	if user.UnlockedBooks == nil {
+		user.UnlockedBooks = []models.BookPermission{}
 	}
 	if user.Addresses == nil {
 		user.Addresses = []models.Address{}
@@ -216,6 +234,28 @@ func (s *UserService) CreateOrUpdateUserProfile(req models.CreateUserRequest) (*
 			updates["city"] = req.City
 		}
 
+		// 推荐码不能和自己的推荐码一样
+		if req.ReferredBy == existingUser.ReferralCode {
+			return nil, false, &models.ReferralError{
+				Code:    "referral_cannot_be_self",
+				Message: "推荐码不能和自己的推荐码一样",
+			}
+		}
+
+		// 处理推荐码更新逻辑
+		if req.ReferredBy != "" {
+			// 检查用户是否已有推荐码
+			if existingUser.ReferredBy != "" {
+				// 推荐码已设置，不允许修改
+				return nil, false, &models.ReferralError{
+					Code:    "referral_already_set",
+					Message: "推荐码已设置，不可修改",
+				}
+			}
+			// 用户没有推荐码，允许设置
+			updates["referred_by"] = req.ReferredBy
+		}
+
 		if len(updates) > 0 {
 			updatedUser, err := s.UpdateUser(req.OpenID, updates)
 			if err != nil {
@@ -256,8 +296,8 @@ func (s *AddressService) CreateAddress(openID string, req models.AddressRequest)
 		Street:        req.Street,
 		PostalCode:    req.PostalCode,
 		IsDefault:     req.IsDefault,
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
+		CreatedAt:     utils.GetCurrentUTCTime(),
+		UpdatedAt:     utils.GetCurrentUTCTime(),
 	}
 
 	// 如果设置为默认地址，先取消其他默认地址
@@ -280,7 +320,7 @@ func (s *AddressService) CreateAddress(openID string, req models.AddressRequest)
 	update := bson.M{
 		"$set": bson.M{
 			"addresses":  user.Addresses,
-			"updated_at": time.Now(),
+			"updated_at": utils.GetCurrentUTCTime(),
 		},
 	}
 
@@ -323,7 +363,7 @@ func (s *AddressService) UpdateAddress(openID string, addressID primitive.Object
 			user.Addresses[i].District = req.District
 			user.Addresses[i].Street = req.Street
 			user.Addresses[i].PostalCode = req.PostalCode
-			user.Addresses[i].UpdatedAt = time.Now()
+			user.Addresses[i].UpdatedAt = utils.GetCurrentUTCTime()
 
 			// 处理默认地址设置
 			if req.IsDefault && !user.Addresses[i].IsDefault {
@@ -354,7 +394,7 @@ func (s *AddressService) UpdateAddress(openID string, addressID primitive.Object
 	update := bson.M{
 		"$set": bson.M{
 			"addresses":  user.Addresses,
-			"updated_at": time.Now(),
+			"updated_at": utils.GetCurrentUTCTime(),
 		},
 	}
 
@@ -397,7 +437,7 @@ func (s *AddressService) DeleteAddress(openID string, addressID primitive.Object
 	update := bson.M{
 		"$set": bson.M{
 			"addresses":  user.Addresses,
-			"updated_at": time.Now(),
+			"updated_at": utils.GetCurrentUTCTime(),
 		},
 	}
 
@@ -450,12 +490,97 @@ func (s *AddressService) SetDefaultAddress(openID string, defaultAddressID primi
 	update := bson.M{
 		"$set": bson.M{
 			"addresses":  user.Addresses,
-			"updated_at": time.Now(),
+			"updated_at": utils.GetCurrentUTCTime(),
 		},
 	}
 
 	_, err = collection.UpdateOne(ctx, filter, update)
 	return err
+}
+
+// AddToCollectedCards 添加单词卡到收藏列表
+func (s *UserService) AddToCollectedCards(userOpenID string, wordID primitive.ObjectID, wordName string) error {
+	collection := GetCollection("users")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	// 检查是否已经收藏
+	var user models.User
+	err := collection.FindOne(ctx, bson.M{"openID": userOpenID}).Decode(&user)
+	if err != nil {
+		return err
+	}
+
+	// 检查是否已经在收藏列表中
+	for _, card := range user.CollectedCards {
+		if card.WordID == wordID {
+			return nil // 已经收藏，无需重复添加
+		}
+	}
+
+	// 创建新的收藏记录
+	newCollectedCard := models.CollectedCard{
+		ID:          primitive.NewObjectID(),
+		WordID:      wordID,
+		WordName:    wordName,
+		CollectedAt: utils.GetCurrentUTCTime(),
+	}
+
+	// 添加到收藏列表
+	filter := bson.M{"openID": userOpenID}
+	update := bson.M{
+		"$push": bson.M{"collected_cards": newCollectedCard},
+		"$set":  bson.M{"updated_at": utils.GetCurrentUTCTime()},
+	}
+
+	_, err = collection.UpdateOne(ctx, filter, update)
+	return err
+}
+
+// RemoveFromCollectedCards 从收藏列表中移除单词卡
+func (s *UserService) RemoveFromCollectedCards(userOpenID string, wordID primitive.ObjectID) error {
+	collection := GetCollection("users")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	filter := bson.M{"openID": userOpenID}
+	update := bson.M{
+		"$pull": bson.M{"collected_cards": bson.M{"word_id": wordID}},
+		"$set":  bson.M{"updated_at": utils.GetCurrentUTCTime()},
+	}
+
+	_, err := collection.UpdateOne(ctx, filter, update)
+	return err
+}
+
+// GetCollectedCards 获取用户收藏的单词卡列表
+func (s *UserService) GetCollectedCards(userOpenID string) ([]models.CollectedCard, error) {
+	user, err := s.FindUserByOpenID(userOpenID)
+	if err != nil {
+		return nil, err
+	}
+
+	if user.CollectedCards == nil {
+		return []models.CollectedCard{}, nil
+	}
+
+	return user.CollectedCards, nil
+}
+
+// IsCardCollected 检查单词卡是否已被收藏
+func (s *UserService) IsCardCollected(userOpenID string, wordID primitive.ObjectID) (bool, error) {
+	user, err := s.FindUserByOpenID(userOpenID)
+	if err != nil {
+		return false, err
+	}
+
+	for _, card := range user.CollectedCards {
+		if card.WordID == wordID {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 // ===== 向后兼容函数 =====

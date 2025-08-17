@@ -11,6 +11,13 @@ import (
 // GetUnitWordsHandler 获取指定单元的所有单词列表
 func GetUnitWordsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 获取用户ID（从token中获取）
+		userID, exists := c.Get("user_openid")
+		if !exists {
+			UnauthorizedResponse(c, "未找到用户身份信息", nil)
+			return
+		}
+
 		// 获取unit_id参数
 		unitIDStr := c.Param("unit_id")
 
@@ -21,10 +28,32 @@ func GetUnitWordsHandler() gin.HandlerFunc {
 			return
 		}
 
-		// 查询该单元的所有单词
-		collection := GetCollection("words")
+		// 获取单元信息和关联的书籍ID
+		unitCollection := GetCollection("units")
 		ctx, cancel := CreateDBContext()
 		defer cancel()
+
+		var unit models.Unit
+		err = unitCollection.FindOne(ctx, bson.M{"_id": unitID}).Decode(&unit)
+		if err != nil {
+			NotFoundResponse(c, "未找到指定单元", err)
+			return
+		}
+
+		// 检查用户是否有访问该书籍的权限
+		hasPermission, accessType, err := CheckUserBookPermission(userID.(string), unit.BookID)
+		if err != nil {
+			InternalServerErrorResponse(c, "检查用户权限失败", err)
+			return
+		}
+
+		if !hasPermission {
+			ForbiddenResponse(c, "您没有访问该书籍的权限，请先购买相关单词卡", nil)
+			return
+		}
+
+		// 查询该单元的所有单词
+		collection := GetCollection("words")
 
 		// 构建查询条件
 		filter := bson.M{"unit_id": unitID}
@@ -46,9 +75,10 @@ func GetUnitWordsHandler() gin.HandlerFunc {
 
 		// 返回结果
 		SuccessResponse(c, "获取单词列表成功", gin.H{
-			"unit_id":    unitIDStr,
-			"words":      words,
-			"word_count": len(words),
+			"unit_id":     unitIDStr,
+			"words":       words,
+			"word_count":  len(words),
+			"access_type": accessType,
 		})
 	}
 }
@@ -56,11 +86,25 @@ func GetUnitWordsHandler() gin.HandlerFunc {
 // GetWordCardHandler 获取指定单词的详细信息（包括图片）
 func GetWordCardHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 获取word_name参数
-		wordName := c.Param("word_name")
+		// 获取用户ID（从token中获取）
+		userID, exists := c.Get("user_openid")
+		if !exists {
+			UnauthorizedResponse(c, "未找到用户身份信息", nil)
+			return
+		}
 
-		if wordName == "" {
-			BadRequestResponse(c, "单词名称不能为空", nil)
+		// 获取word_id参数
+		wordIDStr := c.Param("word_id")
+
+		if wordIDStr == "" {
+			BadRequestResponse(c, "单词ID不能为空", nil)
+			return
+		}
+
+		// 将字符串转换为ObjectID
+		wordID, err := primitive.ObjectIDFromHex(wordIDStr)
+		if err != nil {
+			BadRequestResponse(c, "单词ID格式无效", err)
 			return
 		}
 
@@ -70,13 +114,33 @@ func GetWordCardHandler() gin.HandlerFunc {
 		defer cancel()
 
 		// 构建查询条件
-		filter := bson.M{"word_name": wordName}
+		filter := bson.M{"_id": wordID}
 
 		var word models.Word
-		err := collection.FindOne(ctx, filter).Decode(&word)
+		err = collection.FindOne(ctx, filter).Decode(&word)
 		if err != nil {
 			NotFoundResponse(c, "未找到指定单词", err)
 			return
+		}
+
+		// 检查用户是否有访问该书籍的权限
+		hasPermission, accessType, err := CheckUserBookPermission(userID.(string), word.BookID)
+		if err != nil {
+			InternalServerErrorResponse(c, "检查用户权限失败", err)
+			return
+		}
+
+		if !hasPermission {
+			ForbiddenResponse(c, "您没有访问该单词卡的权限，请先购买相关单词卡", nil)
+			return
+		}
+
+		// 检查是否已收藏
+		userService := GetUserService()
+		isCollected, err := userService.IsCardCollected(userID.(string), word.ID)
+		if err != nil {
+			// 收藏状态查询失败不影响主要功能
+			isCollected = false
 		}
 
 		// 返回单词详细信息，特别是图片URL
@@ -87,6 +151,8 @@ func GetWordCardHandler() gin.HandlerFunc {
 			"img_url":           word.ImgURL,
 			"unit_id":           word.UnitID.Hex(),
 			"book_id":           word.BookID.Hex(),
+			"access_type":       accessType,
+			"is_collected":      isCollected,
 		})
 	}
 }
@@ -94,6 +160,13 @@ func GetWordCardHandler() gin.HandlerFunc {
 // GetWordsByUnitNameHandler 通过单元名称获取单词列表（备用方案）
 func GetWordsByUnitNameHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 获取用户ID（从token中获取）
+		userID, exists := c.Get("user_openid")
+		if !exists {
+			UnauthorizedResponse(c, "未找到用户身份信息", nil)
+			return
+		}
+
 		// 获取unit_name参数
 		unitName := c.Query("unit_name")
 		bookName := c.Query("book_name")
@@ -109,6 +182,8 @@ func GetWordsByUnitNameHandler() gin.HandlerFunc {
 		defer cancel()
 
 		unitFilter := bson.M{"unit_name": unitName}
+		var bookID primitive.ObjectID
+
 		if bookName != "" {
 			// 如果提供了书籍名称，先查找book_id
 			bookCollection := GetCollection("books")
@@ -124,16 +199,31 @@ func GetWordsByUnitNameHandler() gin.HandlerFunc {
 				return
 			}
 
+			bookID = book.ID
 			unitFilter["book_id"] = book.ID
 		}
 
-		var unit struct {
-			ID primitive.ObjectID `bson:"_id"`
-		}
-
+		var unit models.Unit
 		err := unitCollection.FindOne(ctx, unitFilter).Decode(&unit)
 		if err != nil {
 			NotFoundResponse(c, "未找到指定单元", err)
+			return
+		}
+
+		// 如果没有提供书籍名称，从单元信息中获取book_id
+		if bookName == "" {
+			bookID = unit.BookID
+		}
+
+		// 检查用户是否有访问该书籍的权限
+		hasPermission, accessType, err := CheckUserBookPermission(userID.(string), bookID)
+		if err != nil {
+			InternalServerErrorResponse(c, "检查用户权限失败", err)
+			return
+		}
+
+		if !hasPermission {
+			ForbiddenResponse(c, "您没有访问该书籍的权限，请先购买相关单词卡", nil)
 			return
 		}
 
@@ -156,11 +246,12 @@ func GetWordsByUnitNameHandler() gin.HandlerFunc {
 
 		// 返回结果
 		SuccessResponse(c, "获取单词列表成功", gin.H{
-			"unit_name":  unitName,
-			"book_name":  bookName,
-			"unit_id":    unit.ID.Hex(),
-			"words":      words,
-			"word_count": len(words),
+			"unit_name":   unitName,
+			"book_name":   bookName,
+			"unit_id":     unit.ID.Hex(),
+			"words":       words,
+			"word_count":  len(words),
+			"access_type": accessType,
 		})
 	}
 }

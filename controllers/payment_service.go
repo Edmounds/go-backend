@@ -11,6 +11,7 @@ import (
 	"log"
 	"miniprogram/config"
 	"miniprogram/models"
+	timeutils "miniprogram/utils"
 	"time"
 
 	"github.com/wechatpay-apiv3/wechatpay-go/core"
@@ -64,8 +65,8 @@ func (s *PaymentService) CreateWechatPayOrder(orderID string, userOpenID string)
 		Mchid:       core.String(cfg.WechatMchID),
 		Description: core.String("商品购买"),
 		OutTradeNo:  core.String(orderID),
-		TimeExpire:  core.Time(time.Now().Add(30 * time.Minute)),            // 30分钟过期
-		NotifyUrl:   core.String(cfg.BaseAPIURL + "/api/wechat/pay/notify"), // 微信支付回调URL
+		TimeExpire:  core.Time(timeutils.GetCurrentUTCTime().Add(30 * time.Minute)), // 30分钟过期
+		NotifyUrl:   core.String(cfg.BaseAPIURL + "/api/wechat/pay/notify"),         // 微信支付回调URL
 		Amount: &jsapi.Amount{
 			Total:    core.Int64(int64(order.TotalAmount * 100)), // 转为分
 			Currency: core.String("CNY"),
@@ -184,6 +185,15 @@ func (s *PaymentService) ProcessPaymentSuccess(orderIDHex, transactionID string)
 		}
 	}
 
+	// 6. 处理书籍权限解锁
+	err = orderService.ProcessOrderUnlockBooks(orderID)
+	if err != nil {
+		log.Printf("处理书籍权限解锁失败: %v", err)
+		// 权限解锁失败不影响支付流程
+	} else {
+		log.Printf("订单 %s 书籍权限解锁成功", orderIDHex)
+	}
+
 	log.Printf("订单 %s 支付成功处理完成", orderIDHex)
 	return nil
 }
@@ -219,7 +229,7 @@ func (s *PaymentService) ClearUserCart(userOpenID string) error {
 		"$set": bson.M{
 			"items":        []models.CartItem{},
 			"total_amount": 0,
-			"updated_at":   time.Now(),
+			"updated_at":   timeutils.GetCurrentUTCTime(),
 		},
 	}
 
@@ -308,8 +318,8 @@ func (s *PaymentService) ProcessAgentWithdraw(withdrawalID, userOpenID string, a
 	cfg := config.GetConfig()
 
 	// 1. 构建企业转账请求
-	outBatchNo := fmt.Sprintf("WITHDRAW_%s_%d", withdrawalID, time.Now().Unix())
-	outDetailNo := fmt.Sprintf("DETAIL_%s_%d", withdrawalID, time.Now().Unix())
+	outBatchNo := fmt.Sprintf("WITHDRAW_%s_%d", withdrawalID, timeutils.GetCurrentUTCTime().Unix())
+	outDetailNo := fmt.Sprintf("DETAIL_%s_%d", withdrawalID, timeutils.GetCurrentUTCTime().Unix())
 
 	transferAmount := int64(amount * 100) // 转换为分
 
@@ -375,7 +385,7 @@ func (s *PaymentService) updateWithdrawStatus(withdrawalID, status, failureReaso
 	update := bson.M{
 		"$set": bson.M{
 			"status":     status,
-			"updated_at": time.Now(),
+			"updated_at": timeutils.GetCurrentUTCTime(),
 		},
 	}
 
@@ -384,7 +394,7 @@ func (s *PaymentService) updateWithdrawStatus(withdrawalID, status, failureReaso
 	}
 
 	if status == "completed" {
-		update["$set"].(bson.M)["completed_at"] = time.Now()
+		update["$set"].(bson.M)["completed_at"] = timeutils.GetCurrentUTCTime()
 	}
 
 	_, err = collection.UpdateOne(ctx, bson.M{"_id": objectID}, update)
@@ -407,7 +417,7 @@ func (s *PaymentService) saveTransferBatchInfo(withdrawalID, batchID, outBatchNo
 			"wechat_batch_id": batchID,
 			"out_batch_no":    outBatchNo,
 			"out_detail_no":   outDetailNo,
-			"updated_at":      time.Now(),
+			"updated_at":      timeutils.GetCurrentUTCTime(),
 		},
 	}
 

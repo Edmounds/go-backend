@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"miniprogram/models"
+	"miniprogram/utils"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -69,8 +70,8 @@ func (s *ReferralCodeService) CreateReferralRecord(referralCode string, referrer
 		ReferralCode: referralCode,
 		UserOpenID:   referrerOpenID,
 		UsedBy:       []models.ReferralUsage{},
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+		CreatedAt:    utils.GetCurrentUTCTime(),
+		UpdatedAt:    utils.GetCurrentUTCTime(),
 	}
 
 	_, err = collection.InsertOne(ctx, referral)
@@ -146,7 +147,7 @@ func (s *CommissionService) GetCommissionsByUserID(openID string, status string,
 func (s *CommissionService) CalculateCommissionStats(commissions []models.Commission) (float64, float64, float64, float64, float64) {
 	var totalAmount, pendingAmount, paidAmount, thisMonthTotal, lastMonthTotal float64
 
-	now := time.Now()
+	now := utils.GetCurrentUTCTime()
 	thisMonthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	lastMonthStart := thisMonthStart.AddDate(0, -1, 0)
 	lastMonthEnd := thisMonthStart.Add(-time.Second)
@@ -176,7 +177,7 @@ func (s *CommissionService) CalculateCommissionStats(commissions []models.Commis
 }
 
 // CreateCommissionRecord 创建佣金记录
-func (s *CommissionService) CreateCommissionRecord(openID string, amount float64, commissionType string, description string, orderID string) error {
+func (s *CommissionService) CreateCommissionRecord(openID string, amount float64, commissionType string, description string, orderID string, referredUserOpenID string, referredUserName string) error {
 	collection := GetCollection("commissions")
 	ctx, cancel := CreateDBContext()
 	defer cancel()
@@ -184,16 +185,18 @@ func (s *CommissionService) CreateCommissionRecord(openID string, amount float64
 	commissionID := GenerateCommissionID()
 
 	commission := models.Commission{
-		CommissionID: commissionID,
-		UserOpenID:   openID,
-		Amount:       amount,
-		Date:         time.Now(),
-		Status:       "pending",
-		Type:         commissionType,
-		Description:  description,
-		OrderID:      orderID,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+		CommissionID:       commissionID,
+		UserOpenID:         openID,
+		Amount:             amount,
+		Date:               utils.GetCurrentUTCTime(),
+		Status:             "pending",
+		Type:               commissionType,
+		Description:        description,
+		OrderID:            orderID,
+		ReferredUserOpenID: referredUserOpenID,
+		ReferredUserName:   referredUserName,
+		CreatedAt:          utils.GetCurrentUTCTime(),
+		UpdatedAt:          utils.GetCurrentUTCTime(),
 	}
 
 	_, err := collection.InsertOne(ctx, commission)
@@ -214,8 +217,13 @@ func NewReferralRewardService() *ReferralRewardService {
 	}
 }
 
-// AddReferralUsage 添加推荐使用记录
-func (s *ReferralRewardService) AddReferralUsage(referralCode string, referredUserOpenID string, referredUserName string, orderID string, commissionAmount float64) error {
+// ValidateReferralCode 验证推荐码是否存在
+func (s *ReferralRewardService) ValidateReferralCode(referralCode string) (*models.User, error) {
+	return s.referralCodeService.GetUserByReferralCode(referralCode)
+}
+
+// AddReferralUsage 添加推荐使用记录（仅记录注册时的使用关系）
+func (s *ReferralRewardService) AddReferralUsage(referralCode string, referredUserOpenID string, referredUserName string) error {
 	collection := GetCollection("referrals")
 	ctx, cancel := CreateDBContext()
 	defer cancel()
@@ -224,17 +232,14 @@ func (s *ReferralRewardService) AddReferralUsage(referralCode string, referredUs
 	usage := models.ReferralUsage{
 		UserOpenID: referredUserOpenID,
 		UserName:   referredUserName,
-		UsedAt:     time.Now(),
-		OrderID:    orderID,
-		Commission: commissionAmount,
-		Status:     "pending",
+		UsedAt:     utils.GetCurrentUTCTime(),
 	}
 
 	// 更新推荐记录，添加使用记录
 	filter := bson.M{"referral_code": referralCode}
 	update := bson.M{
 		"$push": bson.M{"used_by": usage},
-		"$set":  bson.M{"updated_at": time.Now()},
+		"$set":  bson.M{"updated_at": utils.GetCurrentUTCTime()},
 	}
 
 	_, err := collection.UpdateOne(ctx, filter, update)
@@ -262,6 +267,18 @@ func (s *ReferralRewardService) ProcessNewUserReferral(userOpenID string, referr
 		return err
 	}
 
+	// 4. 获取被推荐用户信息，用于记录使用记录
+	referredUser, err := GetUserByOpenID(userOpenID)
+	if err != nil {
+		return err
+	}
+
+	// 5. 添加推荐使用记录到推荐人的 referral 文档中
+	err = s.AddReferralUsage(referralCode, userOpenID, referredUser.UserName)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -275,7 +292,7 @@ func (s *ReferralRewardService) UpdateUserReferredBy(openID string, referralCode
 	update := bson.M{
 		"$set": bson.M{
 			"referred_by": referralCode,
-			"updated_at":  time.Now(),
+			"updated_at":  utils.GetCurrentUTCTime(),
 		},
 	}
 
@@ -306,49 +323,20 @@ func (s *ReferralRewardService) ProcessReferralReward(referredUserOpenID string,
 	commissionRate := CalculateCommissionRate(referrer.AgentLevel)
 	commissionAmount := orderAmount * commissionRate
 
-	// 4. 创建佣金记录
+	// 4. 创建佣金记录（包含完整推荐链条信息）
 	description := "推荐用户消费获得佣金"
-	err = s.commissionService.CreateCommissionRecord(referrer.OpenID, commissionAmount, "referral", description, orderID)
+	err = s.commissionService.CreateCommissionRecord(referrer.OpenID, commissionAmount, "referral", description, orderID, referredUser.OpenID, referredUser.UserName)
 	if err != nil {
 		return err
 	}
 
-	// 5. 更新推荐使用记录
-	err = s.UpdateReferralUsageStatus(referredUser.ReferredBy, referredUserOpenID, orderID, commissionAmount, "completed")
-	if err != nil {
-		return err
-	}
+	// 注意：推荐使用记录和佣金系统已分离，used_by只记录注册关系，佣金单独在commissions集合中管理
 
 	return nil
 }
 
-// UpdateReferralUsageStatus 更新推荐使用记录状态
-func (s *ReferralRewardService) UpdateReferralUsageStatus(referralCode string, referredUserOpenID string, orderID string, commissionAmount float64, status string) error {
-	collection := GetCollection("referrals")
-	ctx, cancel := CreateDBContext()
-	defer cancel()
-
-	filter := bson.M{
-		"referral_code": referralCode,
-		"used_by": bson.M{
-			"$elemMatch": bson.M{
-				"user_openid": referredUserOpenID,
-				"order_id":    orderID,
-			},
-		},
-	}
-
-	update := bson.M{
-		"$set": bson.M{
-			"used_by.$.status":     status,
-			"used_by.$.commission": commissionAmount,
-			"updated_at":           time.Now(),
-		},
-	}
-
-	_, err := collection.UpdateOne(ctx, filter, update)
-	return err
-}
+// 注意：UpdateReferralUsageStatus 函数已删除
+// 因为推荐使用记录和佣金系统已分离，used_by只记录注册关系，不再需要更新状态和佣金
 
 // WechatQRCodeService 微信小程序码服务
 type WechatQRCodeService struct{}

@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"time"
+	"miniprogram/utils"
 )
 
 // ===== 管理员服务层 =====
@@ -27,7 +27,7 @@ func (s *AdminService) UpdateUserAgentLevel(openID string, agentLevel int) error
 	updates := map[string]interface{}{
 		"agent_level": agentLevel,
 		"is_agent":    agentLevel > 0,
-		"updated_at":  time.Now(),
+		"updated_at":  utils.GetCurrentUTCTime(),
 	}
 
 	_, err = userService.UpdateUser(openID, updates)

@@ -6,6 +6,8 @@ import (
 	"log"
 	"time"
 
+	"miniprogram/utils"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -141,8 +143,8 @@ func (dc *DatabaseCreator) CreateUsersCollection(ctx context.Context) error {
 
 		"managed_schools": bson.A{},
 		"managed_regions": bson.A{},
-		"created_at":      time.Now(),
-		"updated_at":      time.Now(),
+		"created_at":      utils.GetCurrentUTCTime(),
+		"updated_at":      utils.GetCurrentUTCTime(),
 	}
 
 	_, err = collection.InsertOne(ctx, sampleData)
@@ -187,8 +189,8 @@ func (dc *DatabaseCreator) CreateProductsCollection(ctx context.Context) error {
 		"name":        "英语学习卡片套装",
 		"price":       99.9,
 		"description": "包含1000个常用英语单词卡片",
-		"created_at":  time.Now(),
-		"updated_at":  time.Now(),
+		"created_at":  utils.GetCurrentUTCTime(),
+		"updated_at":  utils.GetCurrentUTCTime(),
 	}
 
 	_, err = collection.InsertOne(ctx, sampleData)
@@ -234,8 +236,8 @@ func (dc *DatabaseCreator) CreateAddressesCollection(ctx context.Context) error 
 		"street":         "中关村大街1号",
 		"postal_code":    "100000",
 		"is_default":     true,
-		"created_at":     time.Now(),
-		"updated_at":     time.Now(),
+		"created_at":     utils.GetCurrentUTCTime(),
+		"updated_at":     utils.GetCurrentUTCTime(),
 	}
 
 	_, err = collection.InsertOne(ctx, sampleData)
@@ -406,8 +408,8 @@ func (dc *DatabaseCreator) CreateReferralsCollection(ctx context.Context) error 
 		"referral_code": "JOHN123",
 		"user_openid":   "sample_openid_123", // 使用openID而不是MongoDB的_id
 		"used_by":       bson.A{},
-		"created_at":    time.Now(),
-		"updated_at":    time.Now(),
+		"created_at":    utils.GetCurrentUTCTime(),
+		"updated_at":    utils.GetCurrentUTCTime(),
 	}
 
 	_, err = collection.InsertOne(ctx, sampleData)
@@ -457,11 +459,11 @@ func (dc *DatabaseCreator) CreateCommissionsCollection(ctx context.Context) erro
 		"commission_id": "COMM001",
 		"user_openid":   "sample_openid_123", // 使用openID而不是MongoDB的_id
 		"amount":        10.5,
-		"date":          time.Now(),
+		"date":          utils.GetCurrentUTCTime(),
 		"status":        "pending",
 		"type":          "referral",
-		"created_at":    time.Now(),
-		"updated_at":    time.Now(),
+		"created_at":    utils.GetCurrentUTCTime(),
+		"updated_at":    utils.GetCurrentUTCTime(),
 	}
 
 	_, err = collection.InsertOne(ctx, sampleData)
@@ -593,8 +595,8 @@ func (dc *DatabaseCreator) CreateWordsCollection(ctx context.Context) error {
 		"img_url":           "https://example.com/images/hello.jpg",
 		"unit_id":           primitive.NewObjectID(), // 实际使用时应该引用真实的单元ID
 		"book_id":           primitive.NewObjectID(), // 实际使用时应该引用真实的书籍ID
-		"created_at":        time.Now(),
-		"updated_at":        time.Now(),
+		"created_at":        utils.GetCurrentUTCTime(),
+		"updated_at":        utils.GetCurrentUTCTime(),
 	}
 
 	_, err = collection.InsertOne(ctx, sampleData)

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"miniprogram/middlewares"
 	"miniprogram/models"
+	"miniprogram/utils"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -67,7 +67,7 @@ func UpdateProgressHandler() gin.HandlerFunc {
 			"$set": bson.M{
 				"progress.current_unit":  req.CurrentUnit,
 				"progress.learned_words": req.LearnedWords,
-				"updated_at":             time.Now(),
+				"updated_at":             utils.GetCurrentUTCTime(),
 			},
 		}
 
@@ -119,8 +119,34 @@ func GetBooksHandler() gin.HandlerFunc {
 // GetBookWordsHandler 获取书籍单词处理器
 func GetBookWordsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 获取用户ID（从token中获取）
+		userID, exists := c.Get("user_openid")
+		if !exists {
+			UnauthorizedResponse(c, "未找到用户身份信息", nil)
+			return
+		}
+
 		bookID := c.Param("book_id")
 		unitID := c.Query("unit_id")
+
+		// 验证书籍ID格式
+		bookObjectID, err := primitive.ObjectIDFromHex(bookID)
+		if err != nil {
+			BadRequestResponse(c, "无效的书籍ID格式", err)
+			return
+		}
+
+		// 检查用户是否有访问该书籍的权限
+		hasPermission, accessType, err := CheckUserBookPermission(userID.(string), bookObjectID)
+		if err != nil {
+			InternalServerErrorResponse(c, "检查用户权限失败", err)
+			return
+		}
+
+		if !hasPermission {
+			ForbiddenResponse(c, "您没有访问该书籍的权限，请先购买相关单词卡", nil)
+			return
+		}
 
 		// 从数据库获取书籍单词
 		words, unitInfo, err := GetBookWords(bookID, unitID)
@@ -135,6 +161,7 @@ func GetBookWordsHandler() gin.HandlerFunc {
 			"words":       words,
 			"total_count": len(words),
 			"unit_info":   unitInfo,
+			"access_type": accessType,
 		})
 	}
 }

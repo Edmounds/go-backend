@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"miniprogram/config"
 	"miniprogram/models"
+	"miniprogram/utils"
 	"net/http"
 	"net/url"
 	"sync"
@@ -115,15 +116,16 @@ func (s *AuthService) createNewUserWithReferral(openID string, referralCode stri
 	// 创建基础用户
 	newUser := &models.User{
 		OpenID:         openID,
-		CollectedCards: []string{},
+		CollectedCards: []models.CollectedCard{},
+		UnlockedBooks:  []models.BookPermission{},
 		Addresses:      []models.Address{},
 		Progress: models.Progress{
 			LearnedWords: []string{},
 		},
 		ManagedSchools: []string{},
 		ManagedRegions: []string{},
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
+		CreatedAt:      utils.GetCurrentUTCTime(),
+		UpdatedAt:      utils.GetCurrentUTCTime(),
 	}
 
 	// 处理推荐码
@@ -227,7 +229,7 @@ func (s *WechatAccessTokenService) GetAccessToken() (string, error) {
 	defer accessTokenCache.mu.Unlock()
 
 	// 检查缓存是否有效
-	if accessTokenCache.token != "" && time.Now().Before(accessTokenCache.expireAt) {
+	if accessTokenCache.token != "" && utils.GetCurrentUTCTime().Before(accessTokenCache.expireAt) {
 		return accessTokenCache.token, nil
 	}
 
@@ -280,7 +282,7 @@ func (s *WechatAccessTokenService) fetchAccessToken() (string, time.Time, error)
 
 	// 计算过期时间（预留5分钟缓冲）
 	bufferSeconds := 300
-	expireAt := time.Now().Add(time.Duration(data.ExpiresIn-bufferSeconds) * time.Second)
+	expireAt := utils.GetCurrentUTCTime().Add(time.Duration(data.ExpiresIn-bufferSeconds) * time.Second)
 
 	return data.AccessToken, expireAt, nil
 }
@@ -296,7 +298,7 @@ func GetTokenService() *TokenService {
 // GenerateTokenForUser 为用户生成Token
 func (s *TokenService) GenerateTokenForUser(user *models.User) (string, error) {
 	// 暂时返回简单的token，实际使用时会在controller中调用middlewares.GenerateToken
-	return fmt.Sprintf("token_%s_%d", user.OpenID, time.Now().Unix()), nil
+	return fmt.Sprintf("token_%s_%d", user.OpenID, utils.GetCurrentUTCTime().Unix()), nil
 }
 
 // ===== 向后兼容函数 =====

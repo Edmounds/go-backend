@@ -37,13 +37,30 @@ func GetAgentUsersHandler() gin.HandlerFunc {
 			return
 		}
 
-		// 3. 为每个用户添加订单统计信息
+		// 3. 为每个用户添加订单统计信息和推荐码使用详情
+		referralService := NewReferralCodeService()
 		var usersData []gin.H
 		for _, user := range managedUsers {
 			totalOrders, totalSpent, err := userService.GetUserOrderStats(user.OpenID)
 			if err != nil {
 				totalOrders = 0
 				totalSpent = 0.0
+			}
+
+			// 获取用户推荐码使用情况
+			var referralUsageCount int
+			var referralUsageDetails []gin.H
+			if user.ReferralCode != "" {
+				referral, err := referralService.GetReferralByCode(user.ReferralCode)
+				if err == nil {
+					referralUsageCount = len(referral.UsedBy)
+					for _, usage := range referral.UsedBy {
+						referralUsageDetails = append(referralUsageDetails, gin.H{
+							"user_name": usage.UserName,
+							"used_at":   usage.UsedAt.Format(time.RFC3339),
+						})
+					}
+				}
 			}
 
 			usersData = append(usersData, gin.H{
@@ -56,11 +73,13 @@ func GetAgentUsersHandler() gin.HandlerFunc {
 				"phone":       user.Phone,
 				"agent_level": user.AgentLevel,
 
-				"referral_code": user.ReferralCode,
-				"created_at":    user.CreatedAt.Format(time.RFC3339),
-				"updated_at":    user.UpdatedAt.Format(time.RFC3339),
-				"total_orders":  totalOrders,
-				"total_spent":   totalSpent,
+				"referral_code":          user.ReferralCode,
+				"referral_usage_count":   referralUsageCount,
+				"referral_usage_details": referralUsageDetails,
+				"created_at":             user.CreatedAt.Format(time.RFC3339),
+				"updated_at":             user.UpdatedAt.Format(time.RFC3339),
+				"total_orders":           totalOrders,
+				"total_spent":            totalSpent,
 			})
 		}
 

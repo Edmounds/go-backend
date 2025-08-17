@@ -3,6 +3,7 @@ package controllers
 import (
 	"errors"
 	"miniprogram/models"
+	"miniprogram/utils"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -105,8 +106,8 @@ func (s *CartService) createNewCart(userID string) (*models.Cart, error) {
 		UserOpenID:  userID,
 		Items:       []models.CartItem{},
 		TotalAmount: 0,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		CreatedAt:   utils.GetCurrentUTCTime(),
+		UpdatedAt:   utils.GetCurrentUTCTime(),
 	}
 
 	result, err := collection.InsertOne(ctx, cart)
@@ -239,7 +240,7 @@ func (s *CartService) recalculateCartTotal(cart *models.Cart) {
 		total += item.Subtotal
 	}
 	cart.TotalAmount = total
-	cart.UpdatedAt = time.Now()
+	cart.UpdatedAt = utils.GetCurrentUTCTime()
 }
 
 // updateCart 更新购物车到数据库
@@ -349,8 +350,8 @@ func (s *OrderService) CreateOrder(userID string, req models.CreateOrderRequest)
 		PaymentMethod:  req.PaymentMethod,
 		ReferralCode:   req.ReferralCode,
 		ReferrerOpenID: referrerOpenID,
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
+		CreatedAt:      utils.GetCurrentUTCTime(),
+		UpdatedAt:      utils.GetCurrentUTCTime(),
 	}
 
 	// 保存订单到数据库
@@ -417,7 +418,7 @@ func (s *OrderService) UpdateOrderStatus(orderID primitive.ObjectID, status stri
 	update := bson.M{
 		"$set": bson.M{
 			"status":     status,
-			"updated_at": time.Now(),
+			"updated_at": utils.GetCurrentUTCTime(),
 		},
 	}
 
@@ -436,7 +437,7 @@ func (s *OrderService) UpdateOrderPayment(orderID primitive.ObjectID, transactio
 		"$set": bson.M{
 			"status":         "paid",
 			"transaction_id": transactionID,
-			"paid_at":        time.Now(),
+			"paid_at":        utils.GetCurrentUTCTime(),
 			"updated_at":     time.Now(),
 		},
 	}
@@ -445,9 +446,150 @@ func (s *OrderService) UpdateOrderPayment(orderID primitive.ObjectID, transactio
 	return err
 }
 
+// ProcessOrderUnlockBooks 处理订单完成后的书籍权限解锁
+func (s *OrderService) ProcessOrderUnlockBooks(orderID primitive.ObjectID) error {
+	collection := GetCollection("orders")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	// 获取订单信息
+	var order models.Order
+	err := collection.FindOne(ctx, bson.M{"_id": orderID}).Decode(&order)
+	if err != nil {
+		return err
+	}
+
+	// 只处理已支付的订单
+	if order.Status != "paid" {
+		return errors.New("订单状态不是已支付，无法解锁权限")
+	}
+
+	// 获取订单中所有商品的书籍权限信息
+	bookPermissions := make(map[primitive.ObjectID]string) // bookID -> productType
+
+	productCollection := GetCollection("products")
+	for _, item := range order.Items {
+		var product models.Product
+		err := productCollection.FindOne(ctx, bson.M{"product_id": item.ProductID}).Decode(&product)
+		if err != nil {
+			continue // 跳过无法找到的商品
+		}
+
+		// 如果是实体卡，提供完整权限（包含电子版）
+		// 如果是电子卡，只提供电子版权限
+		if product.ProductType == "physical" {
+			bookPermissions[product.BookID] = "physical"
+		} else if product.ProductType == "digital" {
+			// 如果已经有实体权限，保持实体权限
+			if existingType, exists := bookPermissions[product.BookID]; !exists || existingType != "physical" {
+				bookPermissions[product.BookID] = "digital"
+			}
+		}
+	}
+
+	// 解锁用户的书籍权限
+	for bookID, accessType := range bookPermissions {
+		err := s.unlockBookForUser(order.UserOpenID, bookID, accessType, orderID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// unlockBookForUser 为用户解锁指定书籍的权限
+func (s *OrderService) unlockBookForUser(userOpenID string, bookID primitive.ObjectID, accessType string, orderID primitive.ObjectID) error {
+	userCollection := GetCollection("users")
+	bookCollection := GetCollection("books")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	// 获取书籍信息
+	var book models.Book
+	err := bookCollection.FindOne(ctx, bson.M{"_id": bookID}).Decode(&book)
+	if err != nil {
+		return err
+	}
+
+	// 检查用户是否已经有此书的权限
+	var user models.User
+	err = userCollection.FindOne(ctx, bson.M{"openID": userOpenID}).Decode(&user)
+	if err != nil {
+		return err
+	}
+
+	// 查找是否已存在该书籍的权限
+	hasPermission := false
+	needUpdate := false
+	for i, permission := range user.UnlockedBooks {
+		if permission.BookID == bookID {
+			hasPermission = true
+			// 如果当前是电子权限，但新购买的是实体权限，则升级
+			if permission.AccessType == "digital" && accessType == "physical" {
+				user.UnlockedBooks[i].AccessType = "physical"
+				user.UnlockedBooks[i].OrderID = orderID
+				user.UnlockedBooks[i].UnlockedAt = utils.GetCurrentUTCTime()
+				needUpdate = true
+			}
+			break
+		}
+	}
+
+	// 如果没有权限，添加新权限
+	if !hasPermission {
+		newPermission := models.BookPermission{
+			BookID:     bookID,
+			BookName:   book.BookName,
+			AccessType: accessType,
+			OrderID:    orderID,
+			UnlockedAt: utils.GetCurrentUTCTime(),
+		}
+		user.UnlockedBooks = append(user.UnlockedBooks, newPermission)
+		needUpdate = true
+	}
+
+	// 更新用户权限
+	if needUpdate {
+		filter := bson.M{"openID": userOpenID}
+		update := bson.M{
+			"$set": bson.M{
+				"unlocked_books": user.UnlockedBooks,
+				"updated_at":     time.Now(),
+			},
+		}
+		_, err = userCollection.UpdateOne(ctx, filter, update)
+		return err
+	}
+
+	return nil
+}
+
+// CheckUserBookPermission 检查用户是否有访问指定书籍的权限
+func CheckUserBookPermission(userOpenID string, bookID primitive.ObjectID) (bool, string, error) {
+	collection := GetCollection("users")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	var user models.User
+	err := collection.FindOne(ctx, bson.M{"openID": userOpenID}).Decode(&user)
+	if err != nil {
+		return false, "", err
+	}
+
+	// 检查用户是否有该书籍的权限
+	for _, permission := range user.UnlockedBooks {
+		if permission.BookID == bookID {
+			return true, permission.AccessType, nil
+		}
+	}
+
+	return false, "", nil
+}
+
 // generateCartID 生成购物车ID
 func generateCartID() string {
-	return "CART" + time.Now().Format("20060102150405") + GenerateRandomString(4)
+	return "CART" + utils.GetCurrentUTCTime().Format("20060102150405") + GenerateRandomString(4)
 }
 
 // ===== 向后兼容函数 =====

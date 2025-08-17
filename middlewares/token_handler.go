@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"miniprogram/config"
+	"miniprogram/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -41,7 +42,7 @@ var jwtKey = []byte(config.GetConfig().JWTSecret)
 // 生成JWT令牌
 func GenerateToken(user User) (string, error) {
 	// 设置过期时间 - 此处设置为24小时
-	expirationTime := time.Now().Add(24 * time.Hour)
+	expirationTime := utils.GetCurrentUTCTime().Add(24 * time.Hour)
 
 	// 创建JWT声明
 	claims := &Claims{
@@ -49,8 +50,8 @@ func GenerateToken(user User) (string, error) {
 		UserId:   user.UserId,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now()),
+			IssuedAt:  jwt.NewNumericDate(utils.GetCurrentUTCTime()),
+			NotBefore: jwt.NewNumericDate(utils.GetCurrentUTCTime()),
 			Issuer:    "miniprogram",
 			Subject:   user.UserName,
 		},
@@ -121,7 +122,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		}
 
 		// 检查令牌是否过期
-		if time.Now().Unix() > claims.ExpiresAt.Unix() {
+		if utils.GetCurrentUTCTime().Unix() > claims.ExpiresAt.Unix() {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "未授权: 令牌已过期"})
 			c.Abort()
 			return

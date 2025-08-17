@@ -53,6 +53,12 @@ func SetupRoutes(r *gin.Engine) {
 			protected.PUT("/users/:user_id/address/:address_id", controllers.UpdateAddressHandler())
 			protected.DELETE("/users/:user_id/address/:address_id", controllers.DeleteAddressHandler())
 
+			// 收藏功能路由
+			protected.GET("/users/:user_id/collected-cards", controllers.GetCollectedCardsHandler())
+			protected.POST("/users/:user_id/collected-cards/:word_id", controllers.AddToCollectedCardsHandler())
+			protected.DELETE("/users/:user_id/collected-cards/:word_id", controllers.RemoveFromCollectedCardsHandler())
+			protected.GET("/users/:user_id/collected-cards/:word_id/status", controllers.CheckCardCollectedHandler())
+
 			// 管理员路由
 			protected.PUT("/admin/users/:user_id/agent-level", controllers.UpdateAgentLevelHandler())
 
@@ -63,7 +69,7 @@ func SetupRoutes(r *gin.Engine) {
 
 			// 单词卡片相关路由
 			protected.GET("/units/:unit_id/words", controllers.GetUnitWordsHandler())
-			protected.GET("/words/:word_name/card", controllers.GetWordCardHandler())
+			protected.GET("/words/:word_id/card", controllers.GetWordCardHandler())
 			protected.GET("/words", controllers.GetWordsByUnitNameHandler()) // 通过查询参数获取单词
 
 			// 推荐系统相关路由

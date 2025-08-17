@@ -299,8 +299,7 @@
                     "description": "城市"
                   }
                 }
-              },
-              "examples": {}
+              }
             }
           }
         },
@@ -672,7 +671,176 @@
         ]
       }
     },
-    "/api/{user_id}/address/{address_id}": {
+    "/api/users/{user_id}/address/{address_id}": {
+      "put": {
+        "summary": "更新收货地址",
+        "deprecated": false,
+        "description": "更新用户的指定收货地址信息",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID",
+            "required": true,
+            "example": "507f1f77bcf86cd799439011",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "address_id",
+            "in": "path",
+            "description": "地址ID",
+            "required": true,
+            "example": "507f1f77bcf86cd799439013",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "recipient_name",
+                  "phone",
+                  "province",
+                  "city",
+                  "street"
+                ],
+                "properties": {
+                  "recipient_name": {
+                    "type": "string",
+                    "description": "收件人姓名",
+                    "example": "李四"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "description": "收件人电话",
+                    "example": "13800138002"
+                  },
+                  "province": {
+                    "type": "string",
+                    "description": "省份",
+                    "example": "上海市"
+                  },
+                  "city": {
+                    "type": "string",
+                    "description": "城市",
+                    "example": "上海市"
+                  },
+                  "district": {
+                    "type": "string",
+                    "description": "区县",
+                    "example": "浦东新区"
+                  },
+                  "street": {
+                    "type": "string",
+                    "description": "详细地址",
+                    "example": "陆家嘴环路1000号"
+                  },
+                  "postal_code": {
+                    "type": "string",
+                    "description": "邮政编码",
+                    "example": "200000"
+                  },
+                  "is_default": {
+                    "type": "boolean",
+                    "description": "是否为默认地址",
+                    "example": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "地址更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressResponse"
+                },
+                "example": {
+                  "code": 200,
+                  "message": "地址更新成功",
+                  "data": {
+                    "_id": "507f1f77bcf86cd799439013",
+                    "recipient_name": "李四",
+                    "phone": "13800138002",
+                    "province": "上海市",
+                    "city": "上海市",
+                    "district": "浦东新区",
+                    "street": "陆家嘴环路1000号",
+                    "postal_code": "200000",
+                    "is_default": false
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": 400,
+                  "message": "请求参数错误",
+                  "error": "收件人姓名和电话不能为空"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": 401,
+                  "message": "未授权",
+                  "error": "请提供有效的访问令牌"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "地址不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": 404,
+                  "message": "地址不存在",
+                  "error": "未找到ID为 507f1f77bcf86cd799439013 的地址"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
       "delete": {
         "summary": "删除收货地址",
         "deprecated": false,
@@ -731,6 +899,366 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/users/{user_id}/addresses": {
+      "get": {
+        "summary": "获取用户收货地址列表",
+        "deprecated": false,
+        "description": "获取用户的所有收货地址",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID（openID）",
+            "required": true,
+            "example": "507f1f77bcf86cd799439011",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取地址列表成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "获取地址列表成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "addresses": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Address"
+                          }
+                        },
+                        "total_count": {
+                          "type": "integer",
+                          "description": "地址总数"
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "code": 200,
+                  "message": "获取地址列表成功",
+                  "data": {
+                    "addresses": [
+                      {
+                        "_id": "507f1f77bcf86cd799439013",
+                        "recipient_name": "张三",
+                        "phone": "13800138001",
+                        "province": "北京市",
+                        "city": "北京市",
+                        "district": "海淀区",
+                        "street": "中关村大街1号",
+                        "postal_code": "100000",
+                        "is_default": true
+                      }
+                    ],
+                    "total_count": 1
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": 401,
+                  "message": "未授权",
+                  "error": "请提供有效的访问令牌"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "用户不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": 404,
+                  "message": "用户不存在",
+                  "error": "未找到ID为 507f1f77bcf86cd799439011 的用户"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/users/{user_id}/collected-cards": {
+      "get": {
+        "summary": "获取用户收藏的单词卡列表",
+        "deprecated": false,
+        "description": "获取用户收藏的所有单词卡",
+        "tags": [
+          "User",
+          "Cards"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID（openID）",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取收藏列表成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "获取收藏列表成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user_id": {
+                          "type": "string"
+                        },
+                        "collected_cards": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/CollectedCard"
+                          }
+                        },
+                        "total_count": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/users/{user_id}/collected-cards/{word_id}": {
+      "post": {
+        "summary": "收藏单词卡",
+        "deprecated": false,
+        "description": "将指定单词卡添加到用户收藏列表",
+        "tags": [
+          "User",
+          "Cards"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID（openID）",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "word_id",
+            "in": "path",
+            "description": "单词ID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "收藏成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "取消收藏单词卡",
+        "deprecated": false,
+        "description": "从用户收藏列表中移除指定单词卡",
+        "tags": [
+          "User",
+          "Cards"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID（openID）",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "word_id",
+            "in": "path",
+            "description": "单词ID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "取消收藏成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/users/{user_id}/collected-cards/{word_id}/status": {
+      "get": {
+        "summary": "检查单词卡收藏状态",
+        "deprecated": false,
+        "description": "检查指定单词卡是否已被用户收藏",
+        "tags": [
+          "User",
+          "Cards"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID（openID）",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "word_id",
+            "in": "path",
+            "description": "单词ID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "检查成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "检查收藏状态成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "word_name": {
+                          "type": "string"
+                        },
+                        "user_id": {
+                          "type": "string"
+                        },
+                        "is_collected": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
                 }
               }
             },
@@ -1784,7 +2312,7 @@
       "get": {
         "summary": "根据单元ID获取单词",
         "deprecated": false,
-        "description": "根据单元ID获取该单元的所有单词列表",
+        "description": "根据单元ID获取该单元的所有单词列表，需要用户购买对应书籍的权限",
         "operationId": "get_units_unit_id_words",
         "tags": [
           "Cards"
@@ -1835,6 +2363,57 @@
             "name": "word_name",
             "in": "path",
             "description": "单词名称",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取单词卡片成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WordCardResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/words/{word_id}/card": {
+      "get": {
+        "summary": "根据单词ID获取卡片",
+        "deprecated": false,
+        "description": "根据单词ID获取单词卡片详细信息（包括图片），需要用户购买对应书籍的权限",
+        "operationId": "get_words_word_id_card",
+        "tags": [
+          "Cards"
+        ],
+        "parameters": [
+          {
+            "name": "word_name",
+            "in": "path",
+            "description": "单词名称",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "word_id",
+            "in": "path",
+            "description": "",
             "required": true,
             "example": "",
             "schema": {
@@ -2493,7 +3072,7 @@
       "get": {
         "summary": "获取书籍单词",
         "deprecated": false,
-        "description": "获取指定书籍的所有单词",
+        "description": "获取指定书籍的所有单词，需要用户购买对应书籍的权限",
         "operationId": "get_books_book_id_words",
         "tags": [
           "Progress"
@@ -2692,9 +3271,16 @@
           "collected_cards": {
             "type": "array",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/CollectedCard"
             },
-            "description": "收集的卡片ID列表"
+            "description": "收藏的单词卡列表"
+          },
+          "unlocked_books": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookPermission"
+            },
+            "description": "已解锁的书籍权限列表"
           },
           "addresses": {
             "type": "array",
@@ -2793,6 +3379,18 @@
               "type": "string"
             },
             "description": "商品图片URL列表"
+          },
+          "product_type": {
+            "type": "string",
+            "enum": [
+              "physical",
+              "digital"
+            ],
+            "description": "商品类型：physical=实体卡，digital=电子卡"
+          },
+          "book_id": {
+            "type": "string",
+            "description": "关联的书籍ID"
           },
           "created_at": {
             "type": "string",
@@ -3103,6 +3701,14 @@
           "order_id": {
             "type": "string",
             "description": "关联订单ID"
+          },
+          "referred_user_openid": {
+            "type": "string",
+            "description": "被推荐用户OpenID"
+          },
+          "referred_user_name": {
+            "type": "string",
+            "description": "被推荐用户名"
           },
           "created_at": {
             "type": "string",
@@ -3730,25 +4336,9 @@
             "type": "string",
             "format": "date-time",
             "description": "使用时间"
-          },
-          "order_id": {
-            "type": "string",
-            "description": "关联订单ID"
-          },
-          "commission": {
-            "type": "number",
-            "description": "佣金金额"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "completed",
-              "cancelled"
-            ],
-            "description": "状态"
           }
-        }
+        },
+        "description": "推荐码使用记录（仅记录注册时的使用关系，佣金记录已分离到独立的commissions集合）"
       },
       "WordCardResponse": {
         "type": "object",
@@ -4110,6 +4700,58 @@
             }
           }
         }
+      },
+      "BookPermission": {
+        "type": "object",
+        "properties": {
+          "book_id": {
+            "type": "string",
+            "description": "书籍ID"
+          },
+          "book_name": {
+            "type": "string",
+            "description": "书籍名称"
+          },
+          "access_type": {
+            "type": "string",
+            "enum": [
+              "digital",
+              "physical"
+            ],
+            "description": "访问类型：digital=电子版权限，physical=实体版权限（包含电子版）"
+          },
+          "order_id": {
+            "type": "string",
+            "description": "购买订单ID"
+          },
+          "unlocked_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "解锁时间"
+          }
+        }
+      },
+      "CollectedCard": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "收藏记录ID"
+          },
+          "word_id": {
+            "type": "string",
+            "description": "单词ID"
+          },
+          "word_name": {
+            "type": "string",
+            "description": "单词名称"
+          },
+          "collected_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "收藏时间"
+          }
+        }
       }
     },
     "securitySchemes": {
@@ -4121,6 +4763,15 @@
       }
     }
   },
-  "servers": [],
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "开发环境"
+    },
+    {
+      "url": "https://backend.edmounds.top",
+      "description": "测试环境"
+    }
+  ],
   "security": []
 }

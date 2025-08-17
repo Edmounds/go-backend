@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"miniprogram/models"
+	"miniprogram/utils"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -125,7 +126,7 @@ func (s *AgentUserService) GetAgentStatistics(agent *models.User) (map[string]in
 	totalRevenue := 0.0
 	totalOrders := 0
 
-	now := time.Now()
+	now := utils.GetCurrentUTCTime()
 	thisMonthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 
 	for _, user := range managedUsers {
@@ -192,7 +193,7 @@ func (s *AgentCommissionService) GetCommissionsByDateRange(openID string, startD
 
 // GetCommissionDashboard 获取代理佣金仪表板数据
 func (s *AgentCommissionService) GetCommissionDashboard(openID string) (map[string]interface{}, error) {
-	now := time.Now()
+	now := utils.GetCurrentUTCTime()
 
 	// 今日开始时间
 	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
@@ -270,7 +271,7 @@ func (s *AgentCommissionService) GetCommissionDashboard(openID string) (map[stri
 
 // GetCommissionDetails 获取代理佣金明细数据（按月统计）
 func (s *AgentCommissionService) GetCommissionDetails(openID string, months int) (map[string]interface{}, error) {
-	now := time.Now()
+	now := utils.GetCurrentUTCTime()
 	var monthlyData []map[string]interface{}
 
 	for i := months - 1; i >= 0; i-- {
@@ -285,17 +286,34 @@ func (s *AgentCommissionService) GetCommissionDetails(openID string, months int)
 		}
 
 		monthIncome := 0.0
+		var commissionDetails []map[string]interface{}
+
 		for _, commission := range commissions {
 			if commission.Status == "paid" {
 				monthIncome += commission.Amount
 			}
+
+			// 添加详细的佣金记录信息
+			commissionDetails = append(commissionDetails, map[string]interface{}{
+				"commission_id":        commission.CommissionID,
+				"amount":               commission.Amount,
+				"status":               commission.Status,
+				"type":                 commission.Type,
+				"description":          commission.Description,
+				"order_id":             commission.OrderID,
+				"referred_user_openid": commission.ReferredUserOpenID,
+				"referred_user_name":   commission.ReferredUserName,
+				"date":                 commission.Date.Format(time.RFC3339),
+				"created_at":           commission.CreatedAt.Format(time.RFC3339),
+			})
 		}
 
 		monthlyData = append(monthlyData, map[string]interface{}{
-			"month":       monthStart.Format("2006年1月"),
-			"month_code":  monthStart.Format("2006-01"),
-			"income":      monthIncome,
-			"commissions": len(commissions),
+			"month":              monthStart.Format("2006年1月"),
+			"month_code":         monthStart.Format("2006-01"),
+			"income":             monthIncome,
+			"commissions_count":  len(commissions),
+			"commission_details": commissionDetails,
 		})
 	}
 
@@ -304,7 +322,7 @@ func (s *AgentCommissionService) GetCommissionDetails(openID string, months int)
 	totalCommissions := 0
 	for _, data := range monthlyData {
 		totalIncome += data["income"].(float64)
-		totalCommissions += data["commissions"].(int)
+		totalCommissions += data["commissions_count"].(int)
 	}
 
 	return map[string]interface{}{
@@ -332,7 +350,7 @@ func (s *AgentWithdrawService) CreateWithdrawRecord(openID string, amount float6
 	withdrawID := GenerateWithdrawID()
 	processingFee := amount * 0.01 // 1%手续费
 	actualAmount := amount - processingFee
-	estimatedArrival := time.Now().Add(48 * time.Hour) // 2个工作日
+	estimatedArrival := utils.GetCurrentUTCTime().Add(48 * time.Hour) // 2个工作日
 
 	record := models.WithdrawRecord{
 		WithdrawID:       withdrawID,
@@ -344,8 +362,8 @@ func (s *AgentWithdrawService) CreateWithdrawRecord(openID string, amount float6
 		ProcessingFee:    processingFee,
 		ActualAmount:     actualAmount,
 		EstimatedArrival: estimatedArrival,
-		CreatedAt:        time.Now(),
-		UpdatedAt:        time.Now(),
+		CreatedAt:        utils.GetCurrentUTCTime(),
+		UpdatedAt:        utils.GetCurrentUTCTime(),
 	}
 
 	result, err := collection.InsertOne(ctx, record)
@@ -434,25 +452,25 @@ func (s *AgentSalesService) GetSalesData(agent *models.User, startDate, endDate 
 		start, err = time.Parse("2006-01-02", startDate)
 		if err != nil {
 			// 默认为本月第一天
-			now := time.Now()
+			now := utils.GetCurrentUTCTime()
 			start = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 		}
 	} else {
 		// 默认为本月第一天
-		now := time.Now()
+		now := utils.GetCurrentUTCTime()
 		start = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	}
 
 	if endDate != "" {
 		end, err = time.Parse("2006-01-02", endDate)
 		if err != nil {
-			end = time.Now()
+			end = utils.GetCurrentUTCTime()
 		} else {
 			// 设置为当天结束时间
 			end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, end.Location())
 		}
 	} else {
-		end = time.Now()
+		end = utils.GetCurrentUTCTime()
 	}
 
 	filter["created_at"] = bson.M{

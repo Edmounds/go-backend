@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"log"
 	"miniprogram/config"
+	"miniprogram/utils"
 	"net/http"
 	"time"
 
@@ -71,10 +72,17 @@ func UnauthorizedResponse(c *gin.Context, message string, err error) {
 	ErrorResponse(c, http.StatusUnauthorized, 401, message, err)
 }
 
+func ForbiddenResponse(c *gin.Context, message string, err error) {
+	ErrorResponse(c, http.StatusForbidden, 403, message, err)
+}
+
 // 统一的数据库上下文创建
 func CreateDBContext() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), 10*time.Second)
 }
+
+// ===== 时区和时间处理工具函数 =====
+// 这些函数已移动到 utils/time.go 包中避免循环导入
 
 // 数据库连接管理
 var mongoClient *mongo.Client
@@ -99,7 +107,7 @@ func InitMongoDB() {
 	}
 
 	mongoClient = client
-	log.Println("成功连接到MongoDB")
+	log.Println("成功连接到MongoDB, 地址为:", cfg.MongoDBURL)
 }
 
 // GetCollection 获取指定名称的集合
@@ -158,10 +166,10 @@ func CalculateCommissionRate(agentLevel int) float64 {
 
 // GenerateWithdrawID 生成提现ID
 func GenerateWithdrawID() string {
-	return "WD" + time.Now().Format("20060102150405") + GenerateRandomString(4)
+	return "WD" + utils.GetCurrentUTCTime().Format("20060102150405") + GenerateRandomString(4)
 }
 
 // GenerateCommissionID 生成佣金ID
 func GenerateCommissionID() string {
-	return "COMM" + time.Now().Format("20060102150405") + GenerateRandomString(4)
+	return "COMM" + utils.GetCurrentUTCTime().Format("20060102150405") + GenerateRandomString(4)
 }

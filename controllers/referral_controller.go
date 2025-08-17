@@ -158,19 +158,33 @@ func GetReferralInfoHandler() gin.HandlerFunc {
 		// 4. 计算统计信息
 		totalAmount, pendingAmount, _, thisMonthTotal, lastMonthTotal := commissionService.CalculateCommissionStats(commissions)
 
-		// 5. 准备最近推荐记录
+		// 5. 准备最近推荐记录（注册关系）
 		var recentReferrals []gin.H
 		for _, usage := range referral.UsedBy {
 			recentReferrals = append(recentReferrals, gin.H{
-				"user_name":  usage.UserName,
-				"used_at":    usage.UsedAt.Format(time.RFC3339),
-				"order_id":   usage.OrderID,
-				"commission": usage.Commission,
-				"status":     usage.Status,
+				"user_name": usage.UserName,
+				"used_at":   usage.UsedAt.Format(time.RFC3339),
 			})
 		}
 
-		// 6. 构建响应数据
+		// 6. 准备佣金详情（订单和被推荐用户信息）
+		var commissionDetails []gin.H
+		for _, commission := range commissions {
+			commissionDetails = append(commissionDetails, gin.H{
+				"commission_id":        commission.CommissionID,
+				"amount":               commission.Amount,
+				"status":               commission.Status,
+				"type":                 commission.Type,
+				"description":          commission.Description,
+				"order_id":             commission.OrderID,
+				"referred_user_openid": commission.ReferredUserOpenID,
+				"referred_user_name":   commission.ReferredUserName,
+				"date":                 commission.Date.Format(time.RFC3339),
+				"created_at":           commission.CreatedAt.Format(time.RFC3339),
+			})
+		}
+
+		// 7. 构建响应数据
 		SuccessResponse(c, "获取推荐信息成功", gin.H{
 			"_id":                  user.ID,
 			"openID":               openID,
@@ -185,7 +199,8 @@ func GetReferralInfoHandler() gin.HandlerFunc {
 				"last_month":     lastMonthTotal,
 				"total_earnings": totalAmount,
 			},
-			"recent_referrals": recentReferrals,
+			"recent_referrals":   recentReferrals,
+			"commission_details": commissionDetails,
 		})
 	}
 }
@@ -375,7 +390,8 @@ func CalculateCommissionStats(commissions []models.Commission) (float64, float64
 // CreateCommissionRecord 创建佣金记录 (向后兼容)
 func CreateCommissionRecord(openID string, amount float64, commissionType string, description string, orderID string) error {
 	service := NewCommissionService()
-	return service.CreateCommissionRecord(openID, amount, commissionType, description, orderID)
+	// 向后兼容，没有被推荐用户信息时传空字符串
+	return service.CreateCommissionRecord(openID, amount, commissionType, description, orderID, "", "")
 }
 
 // ProcessReferralReward 处理推荐奖励 (向后兼容)
