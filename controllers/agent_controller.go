@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"log"
 	"miniprogram/models"
 	"miniprogram/utils"
@@ -234,15 +235,9 @@ func WithdrawCommissionHandler() gin.HandlerFunc {
 			return
 		}
 
-		// 验证提取方式
-		validMethods := map[string]bool{
-			"wechat":        true,
-			"alipay":        true,
-			"bank_transfer": true,
-		}
-
-		if !validMethods[req.WithdrawMethod] {
-			BadRequestResponse(c, "不支持的提取方式", nil)
+		// 微信支付企业转账只支持微信
+		if req.Amount <= 0 {
+			BadRequestResponse(c, "提取金额必须大于0", nil)
 			return
 		}
 
@@ -253,43 +248,59 @@ func WithdrawCommissionHandler() gin.HandlerFunc {
 			return
 		}
 
+		// 添加调试日志
+		fmt.Printf("[DEBUG] 提取佣金请求: 用户=%s, 请求金额=%.6f, 可提取金额=%.6f\n",
+			agent.OpenID, req.Amount, availableAmount)
+
 		// 3. 验证提取金额
 		if req.Amount > availableAmount {
+			fmt.Printf("[DEBUG] 提取失败: 请求金额 %.6f > 可提取金额 %.6f\n", req.Amount, availableAmount)
 			ErrorResponse(c, http.StatusBadRequest, 400, "提取金额不能超过可提取佣金余额", nil)
 			return
 		}
 
 		// 最小提取金额检查
-		if req.Amount < 10.0 {
-			BadRequestResponse(c, "最小提取金额为10元", nil)
+		if req.Amount < 0.01 {
+			BadRequestResponse(c, "最小提取金额为0.01元", nil)
 			return
 		}
 
-		// 4. 创建提取记录
-		withdrawRecord, err := withdrawService.CreateWithdrawRecord(agent.OpenID, req.Amount, req.WithdrawMethod, req.AccountInfo)
+		// 4. 检查是否存在待处理的提现记录
+		pendingRecord, err := withdrawService.CheckPendingWithdrawRecord(agent.OpenID)
 		if err != nil {
-			InternalServerErrorResponse(c, "创建提取记录失败", err)
+			InternalServerErrorResponse(c, "检查提现记录失败", err)
 			return
+		}
+
+		var withdrawRecord *models.WithdrawRecord
+		if pendingRecord != nil {
+			// 存在待处理记录，使用现有记录重试转账
+			withdrawRecord = pendingRecord
+			log.Printf("发现待处理提现记录，重新使用原商户单号: %s", withdrawRecord.WithdrawID)
+		} else {
+			// 创建新的提取记录
+			withdrawRecord, err = withdrawService.CreateWithdrawRecord(agent.OpenID, req.Amount)
+			if err != nil {
+				InternalServerErrorResponse(c, "创建提取记录失败", err)
+				return
+			}
 		}
 
 		// 5. 调用微信支付企业转账处理提取
 		err = ProcessAgentWithdraw(withdrawRecord.WithdrawID, agent.OpenID, req.Amount)
 		if err != nil {
-			// 转账失败，更新记录状态但不影响响应
+			// 转账失败，返回错误响应
 			log.Printf("微信支付企业转账失败: %v", err)
+			InternalServerErrorResponse(c, "微信支付企业转账失败", err)
+			return
 		}
 
 		SuccessResponse(c, "提取申请提交成功", gin.H{
-			"withdraw_id":       withdrawRecord.WithdrawID,
-			"openID":            openID,
-			"amount":            withdrawRecord.Amount,
-			"withdraw_method":   withdrawRecord.WithdrawMethod,
-			"account_info":      withdrawRecord.AccountInfo,
-			"status":            withdrawRecord.Status,
-			"estimated_arrival": withdrawRecord.EstimatedArrival.Format(time.RFC3339),
-			"created_at":        withdrawRecord.CreatedAt.Format(time.RFC3339),
-			"processing_fee":    withdrawRecord.ProcessingFee,
-			"actual_amount":     withdrawRecord.ActualAmount,
+			"withdraw_id": withdrawRecord.WithdrawID,
+			"openID":      openID,
+			"amount":      withdrawRecord.Amount,
+			"status":      withdrawRecord.Status,
+			"created_at":  withdrawRecord.CreatedAt.Format(time.RFC3339),
 		})
 	}
 }

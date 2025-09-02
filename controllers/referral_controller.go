@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"miniprogram/config"
 	"miniprogram/models"
 	"miniprogram/utils"
 	"net/http"
@@ -61,7 +62,8 @@ func GenerateUnlimitedQRCodeHandler() gin.HandlerFunc {
 		}
 
 		// 调用微信 getwxacodeunlimit 接口
-		url := "https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=" + accessToken
+		cfg := config.GetConfig()
+		url := cfg.WechatAPIURL + "/wxa/getwxacodeunlimit?access_token=" + accessToken
 		httpReq, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(bodyBytes))
 		if err != nil {
 			InternalServerErrorResponse(c, "构建微信请求失败", err)

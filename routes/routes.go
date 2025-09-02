@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"miniprogram/config"
 	"miniprogram/controllers"
 	"miniprogram/middlewares"
 
@@ -18,8 +19,13 @@ func SetupRoutes(r *gin.Engine) {
 		{
 			// 用户认证相关路由
 			public.POST("/auth", controllers.WechatAuthHandler())
-			public.POST("/dev-login", controllers.DevLoginHandler()) // 开发环境专用登录接口
-			public.POST("/users", controllers.CreateUserHandler())
+
+			// 开发环境专用登录接口（可配置启用/禁用）
+			cfg := config.GetConfig()
+			if cfg.EnableDevLogin {
+				public.POST("/dev-login", controllers.DevLoginHandler())
+			}
+			public.POST("/users/profile", controllers.UpdateUserProfileHandler())
 
 			// 商城相关公开路由
 			public.GET("/products", controllers.GetProductsHandler())
@@ -47,6 +53,7 @@ func SetupRoutes(r *gin.Engine) {
 			// 用户管理路由
 			protected.GET("/users/:user_id", controllers.GetUserHandler())
 			protected.POST("/users/:user_id/avatar", controllers.UploadAvatarHandler())
+			protected.GET("/users/:user_id/avatar", controllers.GetAvatarHandler())
 			protected.GET("/users/:user_id/qrcode", controllers.GetUserQRCodeHandler())
 
 			// 地址管理路由
@@ -88,14 +95,30 @@ func SetupRoutes(r *gin.Engine) {
 			protected.GET("/agents/:user_id/commission/details", controllers.GetAgentCommissionDetailsHandler())
 			protected.POST("/agents/:user_id/withdraw", controllers.WithdrawCommissionHandler())
 
-			// 商城相关路由（简化，只保留必要的）
+			// 商城相关路由
+			// 购物车路由
 			protected.GET("/users/:user_id/cart", controllers.GetCartHandler())
 			protected.POST("/users/:user_id/cart", controllers.AddToCartHandler())
-			protected.POST("/users/:user_id/orders", controllers.CreateOrderHandler())
-			protected.GET("/users/:user_id/orders", controllers.GetOrdersHandler())
+			protected.PUT("/users/:user_id/cart/items/:product_id", controllers.UpdateCartItemHandler())
+			protected.DELETE("/users/:user_id/cart/items/:product_id", controllers.DeleteCartItemHandler())
 
+			// 购物车选择功能路由
+			protected.PUT("/users/:user_id/cart/items/:product_id/select", controllers.SelectCartItemHandler())
+			protected.PUT("/users/:user_id/cart/select-all", controllers.SelectAllCartItemsHandler())
+			protected.GET("/users/:user_id/cart/selected", controllers.GetSelectedCartItemsHandler())
+
+			// 订单路由
+			protected.POST("/users/:user_id/orders", controllers.CreateOrderHandler())
+			protected.POST("/users/:user_id/direct-purchase", controllers.DirectPurchaseHandler())
+			protected.GET("/users/:user_id/orders", controllers.GetOrdersHandler())
+			protected.GET("/users/:user_id/orders/:order_id", controllers.GetOrderHandler())
 			// 微信支付相关路由
 			protected.POST("/users/:user_id/orders/pay", controllers.CreateWechatPayOrderHandler())
+
+			// 退款相关路由
+			protected.POST("/users/:user_id/refunds", controllers.CreateRefundHandler())
+			protected.GET("/users/:user_id/refunds", controllers.GetRefundRecordsHandler())
+			protected.GET("/users/:user_id/refunds/:refund_id", controllers.GetRefundHandler())
 
 			// 受保护的搜索路由（需要用户身份）
 			protected.GET("/search/orders", controllers.SearchOrdersHandler())
@@ -103,6 +126,9 @@ func SetupRoutes(r *gin.Engine) {
 
 		// 微信支付回调路由（不需要JWT认证）
 		v1.POST("/wechat/pay/notify", controllers.WechatPayNotifyHandler())
+
+		// 测试路由（仅用于调试）
+		v1.POST("/test/update-order-status", controllers.TestUpdateOrderStatusHandler())
 	}
 
 	// 健康检查

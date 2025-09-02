@@ -177,95 +177,72 @@ func (s *UserService) CheckPassword(hashedPassword, password string) bool {
 	return err == nil
 }
 
-// CreateOrUpdateUserProfile 创建或更新用户资料
-func (s *UserService) CreateOrUpdateUserProfile(req models.CreateUserRequest) (*models.User, bool, error) {
-	// 检查用户是否已存在
+// UpdateUserProfile 更新用户资料
+func (s *UserService) UpdateUserProfile(req models.CreateUserRequest) (*models.User, error) {
+	// 构建更新字段
+	updates := make(map[string]interface{})
+
+	if req.UserName != "" {
+		updates["user_name"] = req.UserName
+	}
+	if req.UserPassword != "" {
+		updates["user_password"] = req.UserPassword
+	}
+	if req.Class != "" {
+		updates["class"] = req.Class
+	}
+	if req.Age > 0 {
+		updates["age"] = req.Age
+	}
+	if req.School != "" {
+		updates["school"] = req.School
+	}
+	if req.Phone != "" {
+		updates["phone"] = req.Phone
+	}
+	if req.City != "" {
+		updates["city"] = req.City
+	}
+
+	// 获取现有用户信息用于验证
 	existingUser, err := s.FindUserByOpenID(req.OpenID)
-	isNewUser := false
-
-	if err != nil && err != mongo.ErrNoDocuments {
-		return nil, false, err
+	if err != nil {
+		return nil, err
 	}
 
-	if existingUser == nil {
-		// 创建新用户
-		newUser := &models.User{
-			OpenID:       req.OpenID,
-			UserName:     req.UserName,
-			UserPassword: req.UserPassword,
-			Class:        req.Class,
-			Age:          req.Age,
-			School:       req.School,
-			Phone:        req.Phone,
-			City:         req.City,
-			ReferredBy:   req.ReferredBy,
+	// 推荐码不能和自己的推荐码一样
+	if req.ReferredBy != "" && req.ReferredBy == existingUser.ReferralCode {
+		return nil, &models.ReferralError{
+			Code:    "referral_cannot_be_self",
+			Message: "推荐码不能和自己的推荐码一样",
 		}
+	}
 
-		err = s.CreateUser(newUser)
+	// 处理推荐码更新逻辑
+	if req.ReferredBy != "" {
+		// 检查用户是否已有推荐码
+		if existingUser.ReferredBy != "" {
+			// 推荐码已设置，不允许修改
+			return nil, &models.ReferralError{
+				Code:    "referral_already_set",
+				Message: "推荐码已设置，不可修改",
+			}
+		}
+		// 用户没有推荐码，允许设置
+		updates["referred_by"] = req.ReferredBy
+	}
+
+	// 如果有字段需要更新，则执行更新
+	if len(updates) > 0 {
+		updatedUser, err := s.UpdateUser(req.OpenID, updates)
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
-
-		isNewUser = true
-		return newUser, isNewUser, nil
-	} else {
-		// 更新现有用户
-		updates := make(map[string]interface{})
-
-		if req.UserName != "" {
-			updates["user_name"] = req.UserName
-		}
-		if req.UserPassword != "" {
-			updates["user_password"] = req.UserPassword
-		}
-		if req.Class != "" {
-			updates["class"] = req.Class
-		}
-		if req.Age > 0 {
-			updates["age"] = req.Age
-		}
-		if req.School != "" {
-			updates["school"] = req.School
-		}
-		if req.Phone != "" {
-			updates["phone"] = req.Phone
-		}
-		if req.City != "" {
-			updates["city"] = req.City
-		}
-
-		// 推荐码不能和自己的推荐码一样
-		if req.ReferredBy == existingUser.ReferralCode {
-			return nil, false, &models.ReferralError{
-				Code:    "referral_cannot_be_self",
-				Message: "推荐码不能和自己的推荐码一样",
-			}
-		}
-
-		// 处理推荐码更新逻辑
-		if req.ReferredBy != "" {
-			// 检查用户是否已有推荐码
-			if existingUser.ReferredBy != "" {
-				// 推荐码已设置，不允许修改
-				return nil, false, &models.ReferralError{
-					Code:    "referral_already_set",
-					Message: "推荐码已设置，不可修改",
-				}
-			}
-			// 用户没有推荐码，允许设置
-			updates["referred_by"] = req.ReferredBy
-		}
-
-		if len(updates) > 0 {
-			updatedUser, err := s.UpdateUser(req.OpenID, updates)
-			if err != nil {
-				return nil, false, err
-			}
-			return updatedUser, isNewUser, nil
-		}
-
-		return existingUser, isNewUser, nil
+		return updatedUser, nil
 	}
+
+	// 没有字段需要更新，返回现有用户信息
+	return existingUser, nil
 }
 
 // AddressService 地址服务

@@ -17,7 +17,7 @@
 # Go workspace file
 go.work
 
-# Environment variables
+# # Environment variables
 .env
 .env.local
 .env.*.local
@@ -39,3 +39,5 @@ Thumbs.db
 
 # Test
 test/
+
+cert/

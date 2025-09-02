@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"miniprogram/models"
 	"miniprogram/utils"
 	"time"
@@ -340,29 +341,45 @@ func NewAgentWithdrawService() *AgentWithdrawService {
 	return &AgentWithdrawService{}
 }
 
+// CheckPendingWithdrawRecord 检查是否存在待处理的提现记录
+func (s *AgentWithdrawService) CheckPendingWithdrawRecord(openID string) (*models.WithdrawRecord, error) {
+	collection := GetCollection("withdrawals")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	var record models.WithdrawRecord
+	err := collection.FindOne(ctx, bson.M{
+		"user_openid": openID,
+		"status":      bson.M{"$in": []string{"pending", "processing"}},
+	}).Decode(&record)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil // 没有找到待处理的记录
+		}
+		return nil, err
+	}
+
+	return &record, nil
+}
+
 // CreateWithdrawRecord 创建提现记录
-func (s *AgentWithdrawService) CreateWithdrawRecord(openID string, amount float64, withdrawMethod string, accountInfo models.AccountInfo) (*models.WithdrawRecord, error) {
+func (s *AgentWithdrawService) CreateWithdrawRecord(openID string, amount float64) (*models.WithdrawRecord, error) {
 	collection := GetCollection("withdrawals")
 	ctx, cancel := CreateDBContext()
 	defer cancel()
 
 	withdrawID := GenerateWithdrawID()
-	processingFee := amount * 0.01 // 1%手续费
-	actualAmount := amount - processingFee
-	estimatedArrival := utils.GetCurrentUTCTime().Add(48 * time.Hour) // 2个工作日
 
 	record := models.WithdrawRecord{
-		WithdrawID:       withdrawID,
-		UserOpenID:       openID,
-		Amount:           amount,
-		WithdrawMethod:   withdrawMethod,
-		AccountInfo:      accountInfo,
-		Status:           "pending",
-		ProcessingFee:    processingFee,
-		ActualAmount:     actualAmount,
-		EstimatedArrival: estimatedArrival,
-		CreatedAt:        utils.GetCurrentUTCTime(),
-		UpdatedAt:        utils.GetCurrentUTCTime(),
+		WithdrawID:     withdrawID,
+		UserOpenID:     openID,
+		Amount:         amount,
+		WithdrawMethod: "wechat", // 微信支付企业转账
+		Status:         "pending",
+		OutBillNo:      withdrawID, // 使用withdrawID作为商户单号，确保唯一性
+		CreatedAt:      utils.GetCurrentUTCTime(),
+		UpdatedAt:      utils.GetCurrentUTCTime(),
 	}
 
 	result, err := collection.InsertOne(ctx, record)
@@ -423,7 +440,15 @@ func (s *AgentWithdrawService) GetAvailableCommission(openID string) (float64, e
 		}
 	}
 
-	return totalCommission - withdrawnAmount, nil
+	availableAmount := totalCommission - withdrawnAmount
+
+	// 添加调试日志
+	fmt.Printf("[DEBUG] 用户 %s 可提取佣金计算: 总佣金=%.6f, 已提取=%.6f, 可提取=%.6f\n",
+		openID, totalCommission, withdrawnAmount, availableAmount)
+	fmt.Printf("[DEBUG] 佣金记录数量: %d, 提取记录数量: %d\n",
+		len(commissions), len(withdrawRecords))
+
+	return availableAmount, nil
 }
 
 // AgentSalesService 代理销售服务

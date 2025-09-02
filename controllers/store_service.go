@@ -2,6 +2,8 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"miniprogram/models"
 	"miniprogram/utils"
 	"time"
@@ -158,6 +160,7 @@ func (s *CartService) AddItemToCart(userID, productID string, quantity int) (*mo
 			Price:     product.Price,
 			Quantity:  quantity,
 			Subtotal:  product.Price * float64(quantity),
+			Selected:  true, // 新添加的商品默认选中
 		}
 		cart.Items = append(cart.Items, cartItem)
 	}
@@ -266,6 +269,85 @@ func (s *CartService) updateCart(cart *models.Cart) (*models.Cart, error) {
 	return cart, nil
 }
 
+// SelectCartItem 选择/取消选择购物车商品
+func (s *CartService) SelectCartItem(userID, productID string, selected bool) (*models.Cart, error) {
+	// 获取购物车
+	cart, err := s.GetUserCart(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 查找并更新商品选择状态
+	found := false
+	for i := range cart.Items {
+		if cart.Items[i].ProductID == productID {
+			cart.Items[i].Selected = selected
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return nil, errors.New("商品不在购物车中")
+	}
+
+	// 重新计算总金额（只计算选中的商品）
+	s.recalculateSelectedCartTotal(cart)
+
+	// 更新数据库
+	return s.updateCart(cart)
+}
+
+// SelectAllCartItems 全选/反选购物车商品
+func (s *CartService) SelectAllCartItems(userID string, selected bool) (*models.Cart, error) {
+	// 获取购物车
+	cart, err := s.GetUserCart(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 更新所有商品的选择状态
+	for i := range cart.Items {
+		cart.Items[i].Selected = selected
+	}
+
+	// 重新计算总金额（只计算选中的商品）
+	s.recalculateSelectedCartTotal(cart)
+
+	// 更新数据库
+	return s.updateCart(cart)
+}
+
+// GetSelectedCartItems 获取选中的购物车商品
+func (s *CartService) GetSelectedCartItems(userID string) ([]models.CartItem, error) {
+	// 获取购物车
+	cart, err := s.GetUserCart(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var selectedItems []models.CartItem
+	for _, item := range cart.Items {
+		if item.Selected {
+			selectedItems = append(selectedItems, item)
+		}
+	}
+
+	return selectedItems, nil
+}
+
+// recalculateSelectedCartTotal 重新计算选中商品的总金额
+func (s *CartService) recalculateSelectedCartTotal(cart *models.Cart) {
+	total := 0.0
+	for _, item := range cart.Items {
+		if item.Selected {
+			total += item.Subtotal
+		}
+	}
+	cart.TotalAmount = total
+	cart.UpdatedAt = utils.GetCurrentUTCTime()
+}
+
 // OrderService 订单服务
 type OrderService struct{}
 
@@ -287,6 +369,20 @@ func (s *OrderService) CreateOrder(userID string, req models.CreateOrderRequest)
 		return nil, errors.New("购物车为空")
 	}
 
+	// 获取选中的商品
+	var selectedItems []models.CartItem
+	var selectedCartItemIDs []string
+	for _, item := range cart.Items {
+		if item.Selected {
+			selectedItems = append(selectedItems, item)
+			selectedCartItemIDs = append(selectedCartItemIDs, item.ProductID)
+		}
+	}
+
+	if len(selectedItems) == 0 {
+		return nil, errors.New("请选择要购买的商品")
+	}
+
 	// 验证地址
 	userService := GetUserService()
 	user, err := userService.FindUserByOpenID(userID)
@@ -306,19 +402,20 @@ func (s *OrderService) CreateOrder(userID string, req models.CreateOrderRequest)
 		return nil, errors.New("收货地址不存在")
 	}
 
-	// 转换购物车商品为订单商品
+	// 转换选中的购物车商品为订单商品
 	var orderItems []models.OrderItem
-	for _, cartItem := range cart.Items {
+	subtotalAmount := 0.0
+	for _, cartItem := range selectedItems {
 		orderItems = append(orderItems, models.OrderItem{
 			ProductID: cartItem.ProductID,
 			Quantity:  cartItem.Quantity,
 			Price:     cartItem.Price,
 		})
+		subtotalAmount += cartItem.Subtotal
 	}
 
 	// 计算折扣
 	discountRate := 0.0
-	subtotalAmount := cart.TotalAmount
 	var referrerOpenID string
 
 	if req.ReferralCode != "" {
@@ -335,7 +432,108 @@ func (s *OrderService) CreateOrder(userID string, req models.CreateOrderRequest)
 	}
 
 	discountAmount := subtotalAmount * discountRate
-	totalAmount := subtotalAmount - discountAmount
+	totalAmount := utils.FormatMoneyForWechatPay(subtotalAmount - discountAmount)
+
+	// 创建订单
+	order := models.Order{
+		UserOpenID:        userID,
+		Items:             orderItems,
+		SelectedCartItems: selectedCartItemIDs, // 记录选中的商品ID，用于支付回调清空
+		SubtotalAmount:    subtotalAmount,
+		DiscountAmount:    discountAmount,
+		DiscountRate:      discountRate,
+		TotalAmount:       totalAmount,
+		Status:            "pending",
+		OrderSource:       "cart", // 标记为购物车订单
+		AddressID:         req.AddressID,
+		PaymentMethod:     req.PaymentMethod,
+		ReferralCode:      req.ReferralCode,
+		ReferrerOpenID:    referrerOpenID,
+		CreatedAt:         utils.GetCurrentUTCTime(),
+		UpdatedAt:         utils.GetCurrentUTCTime(),
+	}
+
+	// 保存订单到数据库
+	collection := GetCollection("orders")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	result, err := collection.InsertOne(ctx, order)
+	if err != nil {
+		return nil, err
+	}
+
+	order.ID = result.InsertedID.(primitive.ObjectID)
+
+	// 注意：不在此处清空购物车，而是在支付成功回调时统一处理
+	// 这样避免了订单创建成功但支付失败时购物车被误清空的问题
+
+	return &order, nil
+}
+
+// CreateDirectOrder 直接购买创建订单
+func (s *OrderService) CreateDirectOrder(userID string, req models.DirectPurchaseRequest) (*models.Order, error) {
+	// 获取商品信息
+	productService := GetProductService()
+	product, err := productService.GetProductByID(req.ProductID)
+	if err != nil {
+		return nil, errors.New("商品不存在")
+	}
+
+	// 检查库存
+	if product.Stock < req.Quantity {
+		return nil, errors.New("库存不足")
+	}
+
+	// 验证地址
+	userService := GetUserService()
+	user, err := userService.FindUserByOpenID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var selectedAddress *models.Address
+	for _, addr := range user.Addresses {
+		if addr.ID.Hex() == req.AddressID {
+			selectedAddress = &addr
+			break
+		}
+	}
+
+	if selectedAddress == nil {
+		return nil, errors.New("收货地址不存在")
+	}
+
+	// 创建订单项
+	orderItems := []models.OrderItem{
+		{
+			ProductID: req.ProductID,
+			Quantity:  req.Quantity,
+			Price:     product.Price,
+		},
+	}
+
+	// 计算小计金额
+	subtotalAmount := product.Price * float64(req.Quantity)
+
+	// 计算折扣 - 从用户的referred_by字段读取推荐码
+	discountRate := 0.0
+	var referrerOpenID string
+	var referralCode string
+
+	if user.ReferredBy != "" {
+		// 根据推荐码获取推荐人信息
+		referralService := NewReferralCodeService()
+		referrer, err := referralService.GetUserByReferralCode(user.ReferredBy)
+		if err == nil {
+			discountRate = referralService.CalculateDiscountRate(referrer.AgentLevel)
+			referrerOpenID = referrer.OpenID
+			referralCode = user.ReferredBy
+		}
+	}
+
+	discountAmount := subtotalAmount * discountRate
+	totalAmount := utils.FormatMoneyForWechatPay(subtotalAmount - discountAmount)
 
 	// 创建订单
 	order := models.Order{
@@ -346,9 +544,10 @@ func (s *OrderService) CreateOrder(userID string, req models.CreateOrderRequest)
 		DiscountRate:   discountRate,
 		TotalAmount:    totalAmount,
 		Status:         "pending",
+		OrderSource:    "direct", // 标记为直接购买订单
 		AddressID:      req.AddressID,
 		PaymentMethod:  req.PaymentMethod,
-		ReferralCode:   req.ReferralCode,
+		ReferralCode:   referralCode,
 		ReferrerOpenID: referrerOpenID,
 		CreatedAt:      utils.GetCurrentUTCTime(),
 		UpdatedAt:      utils.GetCurrentUTCTime(),
@@ -365,11 +564,6 @@ func (s *OrderService) CreateOrder(userID string, req models.CreateOrderRequest)
 	}
 
 	order.ID = result.InsertedID.(primitive.ObjectID)
-
-	// 清空购物车
-	cart.Items = []models.CartItem{}
-	cart.TotalAmount = 0
-	cartService.updateCart(cart)
 
 	return &order, nil
 }
@@ -428,6 +622,8 @@ func (s *OrderService) UpdateOrderStatus(orderID primitive.ObjectID, status stri
 
 // UpdateOrderPayment 更新订单支付信息
 func (s *OrderService) UpdateOrderPayment(orderID primitive.ObjectID, transactionID string) error {
+	log.Printf("[订单状态更新] 开始更新订单支付状态 - 订单ID: %s, 交易ID: %s", orderID.Hex(), transactionID)
+
 	collection := GetCollection("orders")
 	ctx, cancel := CreateDBContext()
 	defer cancel()
@@ -438,12 +634,30 @@ func (s *OrderService) UpdateOrderPayment(orderID primitive.ObjectID, transactio
 			"status":         "paid",
 			"transaction_id": transactionID,
 			"paid_at":        utils.GetCurrentUTCTime(),
-			"updated_at":     time.Now(),
+			"updated_at":     utils.GetCurrentUTCTime(), // 修复时间函数不一致问题
 		},
 	}
 
-	_, err := collection.UpdateOne(ctx, filter, update)
-	return err
+	log.Printf("[订单状态更新] 执行数据库更新操作...")
+	result, err := collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		log.Printf("[订单状态更新] 数据库更新失败: %v", err)
+		return err
+	}
+
+	log.Printf("[订单状态更新] 数据库更新成功 - 匹配数量: %d, 修改数量: %d", result.MatchedCount, result.ModifiedCount)
+
+	if result.MatchedCount == 0 {
+		log.Printf("[订单状态更新] 警告: 未找到匹配的订单 ID: %s", orderID.Hex())
+		return fmt.Errorf("未找到订单 ID: %s", orderID.Hex())
+	}
+
+	if result.ModifiedCount == 0 {
+		log.Printf("[订单状态更新] 警告: 订单状态未发生变化，可能已经是paid状态")
+	}
+
+	log.Printf("[订单状态更新] 订单 %s 状态更新完成", orderID.Hex())
+	return nil
 }
 
 // ProcessOrderUnlockBooks 处理订单完成后的书籍权限解锁
@@ -630,6 +844,24 @@ func DeleteCartItem(userID, productID string) (*models.Cart, error) {
 	return service.DeleteCartItem(userID, productID)
 }
 
+// SelectCartItem 选择/取消选择购物车商品 (向后兼容)
+func SelectCartItem(userID, productID string, selected bool) (*models.Cart, error) {
+	service := GetCartService()
+	return service.SelectCartItem(userID, productID, selected)
+}
+
+// SelectAllCartItems 全选/反选购物车商品 (向后兼容)
+func SelectAllCartItems(userID string, selected bool) (*models.Cart, error) {
+	service := GetCartService()
+	return service.SelectAllCartItems(userID, selected)
+}
+
+// GetSelectedCartItems 获取选中的购物车商品 (向后兼容)
+func GetSelectedCartItems(userID string) ([]models.CartItem, error) {
+	service := GetCartService()
+	return service.GetSelectedCartItems(userID)
+}
+
 // CreateOrder 创建订单 (向后兼容)
 func CreateOrder(userID string, req models.CreateOrderRequest) (*models.Order, error) {
 	service := GetOrderService()
@@ -640,4 +872,10 @@ func CreateOrder(userID string, req models.CreateOrderRequest) (*models.Order, e
 func GetUserOrders(userID string, page, limit int) ([]models.Order, int, error) {
 	service := GetOrderService()
 	return service.GetUserOrders(userID, page, limit)
+}
+
+// CreateDirectOrder 直接购买创建订单 (向后兼容)
+func CreateDirectOrder(userID string, req models.DirectPurchaseRequest) (*models.Order, error) {
+	service := GetOrderService()
+	return service.CreateDirectOrder(userID, req)
 }

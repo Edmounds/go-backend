@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"miniprogram/config"
 	"miniprogram/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -14,7 +15,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const DatabaseName = "miniprogram_db"
+// getDatabaseName 从配置获取数据库名称
+func getDatabaseName() string {
+	cfg := config.GetConfig()
+	return cfg.MongoDBDatabaseName
+}
 
 // DatabaseCreator 数据库创建器结构体
 type DatabaseCreator struct {
@@ -24,9 +29,10 @@ type DatabaseCreator struct {
 
 // NewDatabaseCreator 创建数据库创建器实例
 func NewDatabaseCreator(client *mongo.Client) *DatabaseCreator {
+	dbName := getDatabaseName()
 	return &DatabaseCreator{
 		client: client,
-		db:     client.Database(DatabaseName),
+		db:     client.Database(dbName),
 	}
 }
 

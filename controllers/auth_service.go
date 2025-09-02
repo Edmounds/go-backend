@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"miniprogram/config"
+	"miniprogram/middlewares"
 	"miniprogram/models"
 	"miniprogram/utils"
 	"net/http"
@@ -217,10 +218,15 @@ func (s *AuthService) ValidateReferralCode(referralCode string) (bool, error) {
 
 // generateUserToken 生成用户Token
 func (s *AuthService) generateUserToken(user *models.User) (string, error) {
-	// 这里应该调用token服务，暂时保持原有逻辑
-	// 后续可以抽取为独立的TokenService
-	tokenService := GetTokenService()
-	return tokenService.GenerateTokenForUser(user)
+	// 使用统一的JWT token生成方法
+	tokenUser := middlewares.User{
+		UserName:     user.UserName,
+		UserId:       user.OpenID,
+		UserPassword: user.UserPassword,
+		OpenID:       user.OpenID,
+	}
+
+	return middlewares.GenerateToken(tokenUser)
 }
 
 // WechatAccessTokenService 微信访问令牌服务
@@ -302,20 +308,6 @@ func (s *WechatAccessTokenService) fetchAccessToken() (string, time.Time, error)
 	return data.AccessToken, expireAt, nil
 }
 
-// TokenService Token服务
-type TokenService struct{}
-
-// GetTokenService 获取Token服务实例
-func GetTokenService() *TokenService {
-	return &TokenService{}
-}
-
-// GenerateTokenForUser 为用户生成Token
-func (s *TokenService) GenerateTokenForUser(user *models.User) (string, error) {
-	// 暂时返回简单的token，实际使用时会在controller中调用middlewares.GenerateToken
-	return fmt.Sprintf("token_%s_%d", user.OpenID, utils.GetCurrentUTCTime().Unix()), nil
-}
-
 // ===== 向后兼容函数 =====
 
 // generateUserQRCode 生成用户推荐二维码
@@ -327,10 +319,15 @@ func (s *AuthService) generateUserQRCode(referralCode string) (string, error) {
 		return "", fmt.Errorf("获取微信访问令牌失败: %w", err)
 	}
 
+	// 获取配置
+	cfg := config.GetConfig()
+
 	// 构建请求参数
 	requestData := models.UnlimitedQRCodeRequest{
-		Scene: referralCode,
-		Width: 280,
+		EnvVersion: cfg.QRCodeEnvVersion,
+		Scene:      referralCode,
+		Page:       cfg.QRCodePage,
+		Width:      cfg.QRCodeWidth,
 	}
 
 	// 转换为JSON
@@ -340,7 +337,6 @@ func (s *AuthService) generateUserQRCode(referralCode string) (string, error) {
 	}
 
 	// 调用微信API生成小程序码
-	cfg := config.GetConfig()
 	apiURL := fmt.Sprintf("%s/wxa/getwxacodeunlimit?access_token=%s", cfg.WechatAPIURL, accessToken)
 
 	response, err := http.Post(apiURL, "application/json", strings.NewReader(string(jsonData)))

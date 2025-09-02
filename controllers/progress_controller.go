@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // GetProgressHandler 获取用户学习进度处理器
@@ -177,14 +176,35 @@ func GetBooksList(page, limit int) ([]models.Book, int64, error) {
 	// 计算跳过的文档数
 	skip := (page - 1) * limit
 
-	// 设置查询选项
-	opts := options.Find().
-		SetSkip(int64(skip)).
-		SetLimit(int64(limit)).
-		SetSort(bson.D{{Key: "created_at", Value: -1}}) // 按创建时间倒序
+	// 使用聚合管道关联查询units
+	pipeline := []bson.M{
+		// 关联units集合
+		{
+			"$lookup": bson.M{
+				"from":         "units",
+				"localField":   "_id",
+				"foreignField": "book_id",
+				"as":           "units",
+			},
+		},
+		// 排序
+		{
+			"$sort": bson.M{
+				"created_at": -1,
+			},
+		},
+		// 跳过文档
+		{
+			"$skip": skip,
+		},
+		// 限制文档数
+		{
+			"$limit": limit,
+		},
+	}
 
-	// 执行查询
-	cursor, err := collection.Find(ctx, bson.M{}, opts)
+	// 执行聚合查询
+	cursor, err := collection.Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, 0, err
 	}

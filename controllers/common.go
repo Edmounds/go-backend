@@ -78,7 +78,12 @@ func ForbiddenResponse(c *gin.Context, message string, err error) {
 
 // 统一的数据库上下文创建
 func CreateDBContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), 10*time.Second)
+	cfg := config.GetConfig()
+	timeout, err := time.ParseDuration(cfg.MongoDBTimeout)
+	if err != nil {
+		timeout = 10 * time.Second // 默认超时时间
+	}
+	return context.WithTimeout(context.Background(), timeout)
 }
 
 // ===== 时区和时间处理工具函数 =====
@@ -115,7 +120,8 @@ func GetCollection(collectionName string) *mongo.Collection {
 	if mongoClient == nil {
 		log.Fatal("MongoDB客户端未初始化")
 	}
-	return mongoClient.Database("miniprogram_db").Collection(collectionName)
+	cfg := config.GetConfig()
+	return mongoClient.Database(cfg.MongoDBDatabaseName).Collection(collectionName)
 }
 
 // CloseMongoDB 关闭MongoDB连接

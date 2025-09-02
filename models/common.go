@@ -98,17 +98,18 @@ type Word struct {
 
 // Product 商品结构体
 type Product struct {
-	ID          primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
-	ProductID   string             `bson:"product_id" json:"product_id"`
-	Name        string             `bson:"name" json:"name"`
-	Price       float64            `bson:"price" json:"price"`
-	Description string             `bson:"description" json:"description"`
-	Stock       int                `bson:"stock" json:"stock"`
-	Images      []string           `bson:"images" json:"images"`
-	ProductType string             `bson:"product_type" json:"product_type"` // "physical" 实体卡, "digital" 电子卡
-	BookID      primitive.ObjectID `bson:"book_id" json:"book_id"`           // 关联的书籍ID
-	CreatedAt   time.Time          `bson:"created_at" json:"created_at"`
-	UpdatedAt   time.Time          `bson:"updated_at" json:"updated_at"`
+	ID             primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
+	ProductID      string             `bson:"product_id" json:"product_id"`
+	Name           string             `bson:"name" json:"name"`
+	Price          float64            `bson:"price" json:"price"`
+	Description    string             `bson:"description" json:"description"`
+	Stock          int                `bson:"stock" json:"stock"`
+	Images         []string           `bson:"images" json:"images"`
+	ProductType    string             `bson:"product_type" json:"product_type"`       // "physical" 实体卡, "digital" 电子卡
+	ProductVersion string             `bson:"product_version" json:"product_version"` // 商品版本，如"人教版"、"外研社版"等，用于前端tab筛选
+	BookID         primitive.ObjectID `bson:"book_id" json:"book_id"`                 // 关联的书籍ID
+	CreatedAt      time.Time          `bson:"created_at" json:"created_at"`
+	UpdatedAt      time.Time          `bson:"updated_at" json:"updated_at"`
 }
 
 // Cart 购物车结构体
@@ -129,26 +130,29 @@ type CartItem struct {
 	Price     float64 `bson:"price" json:"price"`
 	Quantity  int     `bson:"quantity" json:"quantity"`
 	Subtotal  float64 `bson:"subtotal" json:"subtotal"`
+	Selected  bool    `bson:"selected" json:"selected"` // 是否选中用于结算，默认为true
 }
 
 // Order 订单结构体
 type Order struct {
-	ID             primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
-	UserOpenID     string             `bson:"user_openid" json:"user_openid"` // 使用OpenID而不是MongoDB的_id
-	Items          []OrderItem        `bson:"items" json:"items"`
-	SubtotalAmount float64            `bson:"subtotal_amount" json:"subtotal_amount"`
-	DiscountAmount float64            `bson:"discount_amount" json:"discount_amount"`
-	DiscountRate   float64            `bson:"discount_rate" json:"discount_rate"`
-	TotalAmount    float64            `bson:"total_amount" json:"total_amount"`
-	Status         string             `bson:"status" json:"status"`
-	AddressID      string             `bson:"address_id" json:"address_id"`
-	PaymentMethod  string             `bson:"payment_method" json:"payment_method"`
-	ReferralCode   string             `bson:"referral_code" json:"referral_code"`
-	ReferrerOpenID string             `bson:"referrer_openid,omitempty" json:"referrer_openid,omitempty"` // 推荐人OpenID
-	TransactionID  string             `bson:"transaction_id,omitempty" json:"transaction_id,omitempty"`   // 微信支付交易ID
-	PaidAt         time.Time          `bson:"paid_at,omitempty" json:"paid_at,omitempty"`                 // 支付时间
-	CreatedAt      time.Time          `bson:"created_at" json:"created_at"`
-	UpdatedAt      time.Time          `bson:"updated_at" json:"updated_at"`
+	ID                primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
+	UserOpenID        string             `bson:"user_openid" json:"user_openid"` // 使用OpenID而不是MongoDB的_id
+	Items             []OrderItem        `bson:"items" json:"items"`
+	SelectedCartItems []string           `bson:"selected_cart_items,omitempty" json:"selected_cart_items,omitempty"` // 记录从购物车选中的商品ID列表，用于支付回调清空
+	SubtotalAmount    float64            `bson:"subtotal_amount" json:"subtotal_amount"`
+	DiscountAmount    float64            `bson:"discount_amount" json:"discount_amount"`
+	DiscountRate      float64            `bson:"discount_rate" json:"discount_rate"`
+	TotalAmount       float64            `bson:"total_amount" json:"total_amount"`
+	Status            string             `bson:"status" json:"status"`
+	OrderSource       string             `bson:"order_source" json:"order_source"` // 订单来源："cart" 或 "direct"
+	AddressID         string             `bson:"address_id" json:"address_id"`
+	PaymentMethod     string             `bson:"payment_method" json:"payment_method"`
+	ReferralCode      string             `bson:"referral_code" json:"referral_code"`
+	ReferrerOpenID    string             `bson:"referrer_openid,omitempty" json:"referrer_openid,omitempty"` // 推荐人OpenID
+	TransactionID     string             `bson:"transaction_id,omitempty" json:"transaction_id,omitempty"`   // 微信支付交易ID
+	PaidAt            time.Time          `bson:"paid_at,omitempty" json:"paid_at,omitempty"`                 // 支付时间
+	CreatedAt         time.Time          `bson:"created_at" json:"created_at"`
+	UpdatedAt         time.Time          `bson:"updated_at" json:"updated_at"`
 }
 
 // OrderItem 订单项结构体
@@ -194,24 +198,22 @@ type ReferralUsage struct {
 
 // WithdrawRecord 提现记录结构体
 type WithdrawRecord struct {
-	ID               primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
-	WithdrawID       string             `bson:"withdraw_id" json:"withdraw_id"`
-	UserOpenID       string             `bson:"user_openid" json:"user_openid"` // 使用OpenID而不是MongoDB的_id
-	Amount           float64            `bson:"amount" json:"amount"`
-	WithdrawMethod   string             `bson:"withdraw_method" json:"withdraw_method"`
-	AccountInfo      AccountInfo        `bson:"account_info" json:"account_info"`
-	Status           string             `bson:"status" json:"status"` // pending, processing, completed, rejected, failed
-	ProcessingFee    float64            `bson:"processing_fee" json:"processing_fee"`
-	ActualAmount     float64            `bson:"actual_amount" json:"actual_amount"`
-	EstimatedArrival time.Time          `bson:"estimated_arrival" json:"estimated_arrival"`
-	CompletedAt      time.Time          `bson:"completed_at,omitempty" json:"completed_at,omitempty"`
-	RejectionReason  string             `bson:"rejection_reason,omitempty" json:"rejection_reason,omitempty"`
-	FailureReason    string             `bson:"failure_reason,omitempty" json:"failure_reason,omitempty"`   // 微信转账失败原因
-	WechatBatchID    string             `bson:"wechat_batch_id,omitempty" json:"wechat_batch_id,omitempty"` // 微信转账批次ID
-	OutBatchNo       string             `bson:"out_batch_no,omitempty" json:"out_batch_no,omitempty"`       // 商户批次号
-	OutDetailNo      string             `bson:"out_detail_no,omitempty" json:"out_detail_no,omitempty"`     // 商户明细号
-	CreatedAt        time.Time          `bson:"created_at" json:"created_at"`
-	UpdatedAt        time.Time          `bson:"updated_at" json:"updated_at"`
+	ID              primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
+	WithdrawID      string             `bson:"withdraw_id" json:"withdraw_id"`
+	UserOpenID      string             `bson:"user_openid" json:"user_openid"` // 使用OpenID而不是MongoDB的_id
+	Amount          float64            `bson:"amount" json:"amount"`
+	WithdrawMethod  string             `bson:"withdraw_method" json:"withdraw_method"`
+	AccountInfo     AccountInfo        `bson:"account_info,omitempty" json:"account_info,omitempty"` // 微信支付企业转账不需要，保留用于兼容
+	Status          string             `bson:"status" json:"status"`                                 // pending, processing, completed, rejected, failed
+	OutBillNo       string             `bson:"out_bill_no,omitempty" json:"out_bill_no,omitempty"`   // 微信转账商户单号
+	CompletedAt     time.Time          `bson:"completed_at,omitempty" json:"completed_at,omitempty"`
+	RejectionReason string             `bson:"rejection_reason,omitempty" json:"rejection_reason,omitempty"`
+	FailureReason   string             `bson:"failure_reason,omitempty" json:"failure_reason,omitempty"`   // 微信转账失败原因
+	WechatBatchID   string             `bson:"wechat_batch_id,omitempty" json:"wechat_batch_id,omitempty"` // 微信转账批次ID
+	OutBatchNo      string             `bson:"out_batch_no,omitempty" json:"out_batch_no,omitempty"`       // 商户批次号
+	OutDetailNo     string             `bson:"out_detail_no,omitempty" json:"out_detail_no,omitempty"`     // 商户明细号
+	CreatedAt       time.Time          `bson:"created_at" json:"created_at"`
+	UpdatedAt       time.Time          `bson:"updated_at" json:"updated_at"`
 }
 
 // AccountInfo 账户信息结构体
@@ -237,6 +239,94 @@ type QRCodeRGB struct {
 	R int `json:"r"`
 	G int `json:"g"`
 	B int `json:"b"`
+}
+
+// ===== 退款相关结构体 =====
+
+// RefundRequest 退款请求结构体
+type RefundRequest struct {
+	TransactionID *string `json:"transaction_id,omitempty"`         // 微信支付订单号（与out_trade_no二选一）
+	OutTradeNo    *string `json:"out_trade_no,omitempty"`           // 商户订单号（与transaction_id二选一）
+	RefundAmount  int64   `json:"refund_amount" binding:"required"` // 退款金额（分）
+	TotalAmount   int64   `json:"total_amount" binding:"required"`  // 原订单金额（分）
+	Reason        string  `json:"reason,omitempty"`                 // 退款原因
+	NotifyUrl     string  `json:"notify_url,omitempty"`             // 退款结果回调URL
+}
+
+// RefundRecord 退款记录结构体
+type RefundRecord struct {
+	ID                  primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
+	RefundID            string             `bson:"refund_id" json:"refund_id"`                                             // 微信支付退款单号
+	OutRefundNo         string             `bson:"out_refund_no" json:"out_refund_no"`                                     // 商户退款单号
+	TransactionID       string             `bson:"transaction_id" json:"transaction_id"`                                   // 微信支付订单号
+	OutTradeNo          string             `bson:"out_trade_no" json:"out_trade_no"`                                       // 商户订单号
+	UserOpenID          string             `bson:"user_openid" json:"user_openid"`                                         // 用户OpenID
+	RefundAmount        int64              `bson:"refund_amount" json:"refund_amount"`                                     // 退款金额（分）
+	TotalAmount         int64              `bson:"total_amount" json:"total_amount"`                                       // 原订单金额（分）
+	Status              string             `bson:"status" json:"status"`                                                   // SUCCESS、CLOSED、PROCESSING、ABNORMAL
+	Channel             string             `bson:"channel,omitempty" json:"channel,omitempty"`                             // 退款渠道
+	UserReceivedAccount string             `bson:"user_received_account,omitempty" json:"user_received_account,omitempty"` // 退款入账账户
+	Reason              string             `bson:"reason,omitempty" json:"reason,omitempty"`                               // 退款原因
+	SuccessTime         string             `bson:"success_time,omitempty" json:"success_time,omitempty"`                   // 退款成功时间
+	CreateTime          string             `bson:"create_time,omitempty" json:"create_time,omitempty"`                     // 退款创建时间
+	FundsAccount        string             `bson:"funds_account,omitempty" json:"funds_account,omitempty"`                 // 资金账户
+	CreatedAt           time.Time          `bson:"created_at" json:"created_at"`
+	UpdatedAt           time.Time          `bson:"updated_at" json:"updated_at"`
+}
+
+// RefundResponse 退款响应结构体
+type RefundResponse struct {
+	RefundID            string                  `json:"refund_id"`                  // 微信支付退款单号
+	OutRefundNo         string                  `json:"out_refund_no"`              // 商户退款单号
+	TransactionID       string                  `json:"transaction_id"`             // 微信支付订单号
+	OutTradeNo          string                  `json:"out_trade_no"`               // 商户订单号
+	Channel             string                  `json:"channel"`                    // 退款渠道
+	UserReceivedAccount string                  `json:"user_received_account"`      // 退款入账账户
+	SuccessTime         string                  `json:"success_time,omitempty"`     // 退款成功时间
+	CreateTime          string                  `json:"create_time"`                // 退款创建时间
+	Status              string                  `json:"status"`                     // 退款状态
+	FundsAccount        string                  `json:"funds_account"`              // 资金账户
+	Amount              *RefundAmount           `json:"amount"`                     // 金额信息
+	PromotionDetail     []RefundPromotionDetail `json:"promotion_detail,omitempty"` // 优惠退款详情
+}
+
+// RefundAmount 退款金额信息
+type RefundAmount struct {
+	Total            int64             `json:"total"`             // 订单总金额（分）
+	Refund           int64             `json:"refund"`            // 退款金额（分）
+	From             []RefundFundsFrom `json:"from,omitempty"`    // 退款出资的账户类型及金额信息
+	PayerTotal       int64             `json:"payer_total"`       // 用户支付金额（分）
+	PayerRefund      int64             `json:"payer_refund"`      // 用户退款金额（分）
+	SettlementRefund int64             `json:"settlement_refund"` // 应结退款金额（分）
+	SettlementTotal  int64             `json:"settlement_total"`  // 应结订单金额（分）
+	DiscountRefund   int64             `json:"discount_refund"`   // 优惠退款金额（分）
+	Currency         string            `json:"currency"`          // 货币类型
+}
+
+// RefundFundsFrom 退款出资账户信息
+type RefundFundsFrom struct {
+	Account string `json:"account"` // 出资账户类型
+	Amount  int64  `json:"amount"`  // 出资金额（分）
+}
+
+// RefundPromotionDetail 退款优惠详情
+type RefundPromotionDetail struct {
+	PromotionID  string              `json:"promotion_id"`           // 优惠券ID
+	Scope        string              `json:"scope"`                  // 优惠范围
+	Type         string              `json:"type"`                   // 优惠类型
+	Amount       int64               `json:"amount"`                 // 优惠券面额（分）
+	RefundAmount int64               `json:"refund_amount"`          // 优惠退款金额（分）
+	GoodsDetail  []RefundGoodsDetail `json:"goods_detail,omitempty"` // 商品优惠信息
+}
+
+// RefundGoodsDetail 退款商品详情
+type RefundGoodsDetail struct {
+	MerchantGoodsID  string `json:"merchant_goods_id"`  // 商户侧商品编码
+	WechatpayGoodsID string `json:"wechatpay_goods_id"` // 微信支付商品编码
+	GoodsName        string `json:"goods_name"`         // 商品名称
+	UnitPrice        int64  `json:"unit_price"`         // 商品单价（分）
+	RefundAmount     int64  `json:"refund_amount"`      // 商品退款金额（分）
+	RefundQuantity   int64  `json:"refund_quantity"`    // 退款商品数量
 }
 
 // CreateUserRequest 创建用户请求
@@ -284,19 +374,19 @@ type SearchResponse struct {
 
 // Book 课本结构体
 type Book struct {
-	ID              primitive.ObjectID   `bson:"_id,omitempty" json:"_id,omitempty"`
-	BookName        string               `bson:"book_name" json:"book_name"`
-	BookVersion     string               `bson:"book_version" json:"book_version"`
-	Description     string               `bson:"description,omitempty" json:"description,omitempty"`
-	Level           string               `bson:"level,omitempty" json:"level,omitempty"`
-	TotalWords      int                  `bson:"total_words,omitempty" json:"total_words,omitempty"`
-	Units           []primitive.ObjectID `bson:"units,omitempty" json:"units,omitempty"`
-	CoverImage      string               `bson:"cover_image,omitempty" json:"cover_image,omitempty"`
-	Author          string               `bson:"author,omitempty" json:"author,omitempty"`
-	Publisher       string               `bson:"publisher,omitempty" json:"publisher,omitempty"`
-	PublicationDate time.Time            `bson:"publication_date,omitempty" json:"publication_date,omitempty"`
-	CreatedAt       time.Time            `bson:"created_at,omitempty" json:"created_at,omitempty"`
-	UpdatedAt       time.Time            `bson:"updated_at,omitempty" json:"updated_at,omitempty"`
+	ID              primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
+	BookName        string             `bson:"book_name" json:"book_name"`
+	BookVersion     string             `bson:"book_version" json:"book_version"`
+	Description     string             `bson:"description,omitempty" json:"description,omitempty"`
+	Level           string             `bson:"level,omitempty" json:"level,omitempty"`
+	TotalWords      int                `bson:"total_words,omitempty" json:"total_words,omitempty"`
+	Units           []Unit             `bson:"-" json:"units,omitempty"` // 不存储到数据库，仅用于API响应
+	CoverImage      string             `bson:"cover_image,omitempty" json:"cover_image,omitempty"`
+	Author          string             `bson:"author,omitempty" json:"author,omitempty"`
+	Publisher       string             `bson:"publisher,omitempty" json:"publisher,omitempty"`
+	PublicationDate time.Time          `bson:"publication_date,omitempty" json:"publication_date,omitempty"`
+	CreatedAt       time.Time          `bson:"created_at,omitempty" json:"created_at,omitempty"`
+	UpdatedAt       time.Time          `bson:"updated_at,omitempty" json:"updated_at,omitempty"`
 }
 
 // Unit 单元结构体
@@ -327,6 +417,14 @@ type CreateOrderRequest struct {
 	AddressID     string `json:"address_id" binding:"required"`
 	PaymentMethod string `json:"payment_method" binding:"required"`
 	ReferralCode  string `json:"referral_code"`
+}
+
+// DirectPurchaseRequest 直接购买请求
+type DirectPurchaseRequest struct {
+	ProductID     string `json:"product_id" binding:"required"`
+	Quantity      int    `json:"quantity" binding:"min=1"`
+	AddressID     string `json:"address_id" binding:"required"`
+	PaymentMethod string `json:"payment_method" binding:"required"`
 }
 
 // 微信支付相关请求结构体
@@ -407,9 +505,52 @@ type UpdateProgressRequest struct {
 // 代理相关请求结构体
 // WithdrawRequest 提取佣金请求
 type WithdrawRequest struct {
-	Amount         float64     `json:"amount" binding:"required,min=0.01"`
-	WithdrawMethod string      `json:"withdraw_method" binding:"required"`
-	AccountInfo    AccountInfo `json:"account_info"`
+	Amount float64 `json:"amount" binding:"required,min=0.01"`
+	// 微信支付企业转账只需要用户openid，不需要额外账户信息
+}
+
+// 新版微信商家转账API相关结构体
+// TransferSceneReportInfo 转账场景报备信息
+type TransferSceneReportInfo struct {
+	InfoType    string `json:"info_type"`    // 报备信息类型
+	InfoContent string `json:"info_content"` // 报备信息内容
+}
+
+// TransferToUserRequest 发起转账到用户请求
+type TransferToUserRequest struct {
+	Appid                    string                    `json:"appid"`                       // 商户AppID
+	OutBillNo                string                    `json:"out_bill_no"`                 // 商户单号
+	TransferSceneId          string                    `json:"transfer_scene_id"`           // 转账场景ID
+	Openid                   string                    `json:"openid"`                      // 收款用户OpenID
+	UserName                 string                    `json:"user_name,omitempty"`         // 收款用户姓名（加密后）
+	TransferAmount           int64                     `json:"transfer_amount"`             // 转账金额（分）
+	TransferRemark           string                    `json:"transfer_remark"`             // 转账备注
+	NotifyUrl                string                    `json:"notify_url,omitempty"`        // 通知地址
+	UserRecvPerception       string                    `json:"user_recv_perception"`        // 用户收款感知
+	TransferSceneReportInfos []TransferSceneReportInfo `json:"transfer_scene_report_infos"` // 转账场景报备信息
+}
+
+// TransferBillStatus 转账单状态
+type TransferBillStatus string
+
+const (
+	TRANSFERBILLSTATUS_ACCEPTED          TransferBillStatus = "ACCEPTED"          // 转账已受理
+	TRANSFERBILLSTATUS_PROCESSING        TransferBillStatus = "PROCESSING"        // 转账锁定资金中
+	TRANSFERBILLSTATUS_WAIT_USER_CONFIRM TransferBillStatus = "WAIT_USER_CONFIRM" // 待收款用户确认
+	TRANSFERBILLSTATUS_TRANSFERING       TransferBillStatus = "TRANSFERING"       // 转账中
+	TRANSFERBILLSTATUS_SUCCESS           TransferBillStatus = "SUCCESS"           // 转账成功
+	TRANSFERBILLSTATUS_FAIL              TransferBillStatus = "FAIL"              // 转账失败
+	TRANSFERBILLSTATUS_CANCELING         TransferBillStatus = "CANCELING"         // 商户撤销请求受理成功
+	TRANSFERBILLSTATUS_CANCELLED         TransferBillStatus = "CANCELLED"         // 转账撤销完成
+)
+
+// TransferToUserResponse 发起转账到用户响应
+type TransferToUserResponse struct {
+	OutBillNo      string              `json:"out_bill_no"`      // 商户单号
+	TransferBillNo string              `json:"transfer_bill_no"` // 微信转账单号
+	CreateTime     string              `json:"create_time"`      // 单据创建时间
+	State          *TransferBillStatus `json:"state"`            // 单据状态
+	PackageInfo    string              `json:"package_info"`     // 跳转领取页面的package信息
 }
 
 // 管理员相关请求结构体

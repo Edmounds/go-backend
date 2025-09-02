@@ -51,4 +51,5 @@ func main() {
 	if err := r.Run(":" + cfg.ServerPort); err != nil {
 		log.Fatal("启动服务器失败:", err)
 	}
+
 }

@@ -17,8 +17,8 @@ import (
 
 // ===== HTTP 处理器 =====
 
-// CreateUserHandler 创建或更新用户处理器
-func CreateUserHandler() gin.HandlerFunc {
+// UpdateUserProfileHandler 更新用户资料处理器
+func UpdateUserProfileHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req models.CreateUserRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -29,8 +29,19 @@ func CreateUserHandler() gin.HandlerFunc {
 		// 初始化用户服务
 		userService := GetUserService()
 
-		// 处理推荐码验证（新用户和老用户都需要验证）
-		if req.ReferredBy != "" {
+		// 检查用户是否存在
+		existingUser, err := userService.FindUserByOpenID(req.OpenID)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				BadRequestResponse(c, "用户不存在，请先完成登录认证", err)
+				return
+			}
+			InternalServerErrorResponse(c, "查找用户失败", err)
+			return
+		}
+
+		// 处理推荐码验证（仅在用户要设置推荐码且之前没有推荐码时）
+		if req.ReferredBy != "" && existingUser.ReferredBy == "" {
 			referralService := NewReferralRewardService()
 			// 先验证推荐码是否存在
 			_, err := referralService.ValidateReferralCode(req.ReferredBy)
@@ -44,38 +55,31 @@ func CreateUserHandler() gin.HandlerFunc {
 			}
 		}
 
-		// 创建或更新用户资料
-		user, isNewUser, err := userService.CreateOrUpdateUserProfile(req)
+		// 更新用户资料
+		user, err := userService.UpdateUserProfile(req)
 		if err != nil {
 			// 检查是否是推荐码相关错误
 			if referralErr, ok := err.(*models.ReferralError); ok {
 				BadRequestResponse(c, referralErr.Message, err)
 				return
 			}
-			InternalServerErrorResponse(c, "用户操作失败", err)
+			InternalServerErrorResponse(c, "用户信息更新失败", err)
 			return
 		}
 
-		// 处理推荐关系（仅对新用户或老用户首次设置推荐码）
-		if req.ReferredBy != "" {
+		// 处理推荐关系（仅在首次设置推荐码时）
+		if req.ReferredBy != "" && existingUser.ReferredBy == "" {
 			referralService := NewReferralRewardService()
 			err := referralService.ProcessNewUserReferral(user.OpenID, req.ReferredBy)
 			if err != nil {
-				// 推荐关系处理失败，但用户已创建/更新，需要回滚推荐码设置
+				// 推荐关系处理失败，但用户信息已更新
 				InternalServerErrorResponse(c, "推荐关系处理失败", err)
 				return
 			}
 		}
 
-		// 构建响应
-		responseMessage := "用户信息更新成功"
-		if isNewUser {
-			responseMessage = "用户创建成功"
-		}
-
-		SuccessResponse(c, responseMessage, gin.H{
-			"user":        user,
-			"is_new_user": isNewUser,
+		SuccessResponse(c, "用户信息更新成功", gin.H{
+			"user": user,
 		})
 	}
 }
@@ -478,6 +482,52 @@ func UploadAvatarHandler() gin.HandlerFunc {
 			"avatar_path": avatarPath,
 			"user_id":     openID,
 		})
+	}
+}
+
+// GetAvatarHandler 获取用户头像处理器
+func GetAvatarHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		openID := c.Param("user_id")
+
+		// 初始化用户服务
+		userService := GetUserService()
+
+		// 获取用户信息
+		user, err := userService.FindUserByOpenID(openID)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				NotFoundResponse(c, "用户不存在", err)
+			} else {
+				InternalServerErrorResponse(c, "获取用户信息失败", err)
+			}
+			return
+		}
+
+		// 检查用户是否有头像
+		if user.Avatar == "" {
+			NotFoundResponse(c, "用户未设置头像", nil)
+			return
+		}
+
+		// 构建完整的文件路径
+		// user.Avatar 存储的是相对路径，如 "/image/avatar/openid.jpg"
+		// 需要转换为服务器上的实际路径
+		fullPath := "/www/wwwroot/miniprogram" + user.Avatar
+
+		// 检查文件是否存在
+		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+			NotFoundResponse(c, "头像文件不存在", err)
+			return
+		}
+
+		// 禁用缓存，确保每次都获取最新头像
+		c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
+		c.Header("Pragma", "no-cache")
+		c.Header("Expires", "0")
+
+		// 直接返回文件，Gin会自动设置正确的Content-Type
+		c.File(fullPath)
 	}
 }
 

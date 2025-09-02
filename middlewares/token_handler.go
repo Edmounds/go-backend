@@ -222,11 +222,16 @@ func getUserByUsername(username string) (bson.M, error) {
 	}
 
 	collection := GetCollectionFunc("users")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	cfg := config.GetConfig()
+	timeout, err := time.ParseDuration(cfg.MongoDBTimeout)
+	if err != nil {
+		timeout = 10 * time.Second // 默认超时时间
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	var user bson.M
-	err := collection.FindOne(ctx, bson.M{"user_name": username}).Decode(&user)
+	err = collection.FindOne(ctx, bson.M{"user_name": username}).Decode(&user)
 	if err != nil {
 		return nil, err
 	}

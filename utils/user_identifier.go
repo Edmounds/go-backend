@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
+	"miniprogram/config"
 )
 
 // UserIdentifierManager 用户标识符管理器
@@ -19,12 +19,9 @@ type UserIdentifierManager struct {
 
 // NewUserIdentifierManager 创建用户标识符管理器实例
 func NewUserIdentifierManager() (*UserIdentifierManager, error) {
-	// 从环境变量获取密钥，如果没有则使用默认密钥（生产环境必须设置）
-	secretKey := os.Getenv("USER_ID_SECRET_KEY")
-	if secretKey == "" {
-		// 默认密钥，生产环境必须更换
-		secretKey = "miniprogram_default_secret_key_2024"
-	}
+	// 从配置获取密钥
+	cfg := config.GetConfig()
+	secretKey := cfg.UserIDSecretKey
 
 	// 使用SHA256生成32字节密钥
 	hash := sha256.Sum256([]byte(secretKey))

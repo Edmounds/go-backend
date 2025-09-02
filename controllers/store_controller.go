@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"miniprogram/models"
 	"strconv"
 
@@ -12,7 +13,6 @@ import (
 // 使用 models 包中的结构体定义，删除重复定义
 
 // ===== HTTP 处理器 =====
-
 // GetProductsHandler 获取商品列表处理器
 func GetProductsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -164,6 +164,84 @@ func GetCartHandler() gin.HandlerFunc {
 	}
 }
 
+// SelectCartItemHandler 选择/取消选择购物车商品处理器
+func SelectCartItemHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID := c.Param("user_id")
+		productID := c.Param("product_id")
+
+		var req struct {
+			Selected bool `json:"selected"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			BadRequestResponse(c, "请求参数错误", err)
+			return
+		}
+
+		// 初始化购物车服务
+		cartService := GetCartService()
+
+		// 选择/取消选择商品
+		cart, err := cartService.SelectCartItem(userID, productID, req.Selected)
+		if err != nil {
+			InternalServerErrorResponse(c, "更新商品选择状态失败", err)
+			return
+		}
+
+		SuccessResponse(c, "商品选择状态更新成功", cart)
+	}
+}
+
+// SelectAllCartItemsHandler 全选/反选购物车商品处理器
+func SelectAllCartItemsHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID := c.Param("user_id")
+
+		var req struct {
+			Selected bool `json:"selected"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			BadRequestResponse(c, "请求参数错误", err)
+			return
+		}
+
+		// 初始化购物车服务
+		cartService := GetCartService()
+
+		// 全选/反选商品
+		cart, err := cartService.SelectAllCartItems(userID, req.Selected)
+		if err != nil {
+			InternalServerErrorResponse(c, "更新商品选择状态失败", err)
+			return
+		}
+
+		action := "反选"
+		if req.Selected {
+			action = "全选"
+		}
+		SuccessResponse(c, fmt.Sprintf("购物车%s成功", action), cart)
+	}
+}
+
+// GetSelectedCartItemsHandler 获取选中的购物车商品处理器
+func GetSelectedCartItemsHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID := c.Param("user_id")
+
+		// 初始化购物车服务
+		cartService := GetCartService()
+
+		// 获取选中的商品
+		selectedItems, err := cartService.GetSelectedCartItems(userID)
+		if err != nil {
+			InternalServerErrorResponse(c, "获取选中商品失败", err)
+			return
+		}
+
+		SuccessResponse(c, "获取选中商品成功", selectedItems)
+	}
+}
+
 // CreateOrderHandler 创建订单处理器
 func CreateOrderHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -272,5 +350,44 @@ func GetOrderHandler() gin.HandlerFunc {
 		}
 
 		SuccessResponse(c, "获取订单详情成功", order)
+	}
+}
+
+// DirectPurchaseHandler 直接购买处理器
+func DirectPurchaseHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID := c.Param("user_id")
+
+		var req models.DirectPurchaseRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			BadRequestResponse(c, "请求参数错误", err)
+			return
+		}
+
+		// 如果数量未设置，默认为1
+		if req.Quantity == 0 {
+			req.Quantity = 1
+		}
+
+		// 初始化订单服务
+		orderService := GetOrderService()
+
+		// 创建直接购买订单
+		order, err := orderService.CreateDirectOrder(userID, req)
+		if err != nil {
+			InternalServerErrorResponse(c, "创建订单失败", err)
+			return
+		}
+
+		// 处理推荐奖励
+		if order.ReferrerOpenID != "" {
+			referralService := NewReferralRewardService()
+			err := referralService.ProcessReferralReward(userID, order.ID.Hex(), order.TotalAmount)
+			if err != nil {
+				// 推荐奖励处理失败不影响订单创建，记录日志即可
+			}
+		}
+
+		CreatedResponse(c, "订单创建成功", order)
 	}
 }
