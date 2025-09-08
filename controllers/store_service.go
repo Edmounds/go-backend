@@ -356,6 +356,71 @@ func GetOrderService() *OrderService {
 	return &OrderService{}
 }
 
+// calculateNewUserDiscount 计算新用户首次购买的固定优惠
+// 返回: 优惠金额, 推荐人OpenID, 错误
+func (s *OrderService) calculateNewUserDiscount(user *models.User, providedReferralCode string, subtotalAmount float64) (float64, string, error) {
+	// 固定优惠金额2元
+	const FIXED_DISCOUNT = 2.0
+
+	// 检查用户是否已经使用过推荐优惠
+	if user.HasUsedReferralDiscount {
+		return 0.0, "", nil // 已使用过优惠，不再享受
+	}
+
+	// 确定使用的推荐码
+	var referralCode string
+	if providedReferralCode != "" {
+		// 购物车订单提供的推荐码
+		referralCode = providedReferralCode
+	} else if user.ReferredBy != "" {
+		// 用户注册时的推荐码
+		referralCode = user.ReferredBy
+	} else {
+		return 0.0, "", nil // 没有推荐关系，不享受优惠
+	}
+
+	// 验证推荐码有效性并获取推荐人信息
+	referralService := NewReferralCodeService()
+	referrer, err := referralService.GetUserByReferralCode(referralCode)
+	if err != nil {
+		return 0.0, "", nil // 推荐码无效，不享受优惠
+	}
+
+	// 检查是否为用户首次订单
+	isFirstOrder, err := s.isUserFirstOrder(user.OpenID)
+	if err != nil {
+		return 0.0, "", err
+	}
+
+	if !isFirstOrder {
+		return 0.0, "", nil // 不是首次购买，不享受优惠
+	}
+
+	// 确保订单金额足够支付优惠（题目说订单总额不会低于2元）
+	if subtotalAmount < FIXED_DISCOUNT {
+		return subtotalAmount, referrer.OpenID, nil // 如果订单金额不足2元，优惠金额为订单金额
+	}
+
+	return FIXED_DISCOUNT, referrer.OpenID, nil
+}
+
+// isUserFirstOrder 检查用户是否首次下订单
+func (s *OrderService) isUserFirstOrder(userOpenID string) (bool, error) {
+	collection := GetCollection("orders")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	count, err := collection.CountDocuments(ctx, bson.M{
+		"user_openid": userOpenID,
+		"status":      bson.M{"$ne": "cancelled"}, // 排除已取消的订单
+	})
+	if err != nil {
+		return false, err
+	}
+
+	return count == 0, nil
+}
+
 // CreateOrder 创建订单
 func (s *OrderService) CreateOrder(userID string, req models.CreateOrderRequest) (*models.Order, error) {
 	// 获取购物车
@@ -414,24 +479,11 @@ func (s *OrderService) CreateOrder(userID string, req models.CreateOrderRequest)
 		subtotalAmount += cartItem.Subtotal
 	}
 
-	// 计算折扣
-	discountRate := 0.0
-	var referrerOpenID string
-
-	if req.ReferralCode != "" {
-		authService := GetAuthService()
-		valid, err := authService.ValidateReferralCode(req.ReferralCode)
-		if err == nil && valid {
-			referralService := NewReferralCodeService()
-			referrer, err := referralService.GetUserByReferralCode(req.ReferralCode)
-			if err == nil {
-				discountRate = referralService.CalculateDiscountRate(referrer.AgentLevel)
-				referrerOpenID = referrer.OpenID
-			}
-		}
+	// 计算折扣 - 新用户首次购买固定优惠逻辑
+	discountAmount, referrerOpenID, err := s.calculateNewUserDiscount(user, req.ReferralCode, subtotalAmount)
+	if err != nil {
+		return nil, err
 	}
-
-	discountAmount := subtotalAmount * discountRate
 	totalAmount := utils.FormatMoneyForWechatPay(subtotalAmount - discountAmount)
 
 	// 创建订单
@@ -441,7 +493,7 @@ func (s *OrderService) CreateOrder(userID string, req models.CreateOrderRequest)
 		SelectedCartItems: selectedCartItemIDs, // 记录选中的商品ID，用于支付回调清空
 		SubtotalAmount:    subtotalAmount,
 		DiscountAmount:    discountAmount,
-		DiscountRate:      discountRate,
+		DiscountRate:      0.0, // 不再使用比率折扣
 		TotalAmount:       totalAmount,
 		Status:            "pending",
 		OrderSource:       "cart", // 标记为购物车订单
@@ -516,23 +568,14 @@ func (s *OrderService) CreateDirectOrder(userID string, req models.DirectPurchas
 	// 计算小计金额
 	subtotalAmount := product.Price * float64(req.Quantity)
 
-	// 计算折扣 - 从用户的referred_by字段读取推荐码
-	discountRate := 0.0
-	var referrerOpenID string
-	var referralCode string
-
-	if user.ReferredBy != "" {
-		// 根据推荐码获取推荐人信息
-		referralService := NewReferralCodeService()
-		referrer, err := referralService.GetUserByReferralCode(user.ReferredBy)
-		if err == nil {
-			discountRate = referralService.CalculateDiscountRate(referrer.AgentLevel)
-			referrerOpenID = referrer.OpenID
-			referralCode = user.ReferredBy
-		}
+	// 计算折扣 - 新用户首次购买固定优惠逻辑
+	discountAmount, referrerOpenID, err := s.calculateNewUserDiscount(user, "", subtotalAmount)
+	if err != nil {
+		return nil, err
 	}
 
-	discountAmount := subtotalAmount * discountRate
+	// 设置推荐码字段
+	referralCode := user.ReferredBy
 	totalAmount := utils.FormatMoneyForWechatPay(subtotalAmount - discountAmount)
 
 	// 创建订单
@@ -541,7 +584,7 @@ func (s *OrderService) CreateDirectOrder(userID string, req models.DirectPurchas
 		Items:          orderItems,
 		SubtotalAmount: subtotalAmount,
 		DiscountAmount: discountAmount,
-		DiscountRate:   discountRate,
+		DiscountRate:   0.0, // 不再使用比率折扣
 		TotalAmount:    totalAmount,
 		Status:         "pending",
 		OrderSource:    "direct", // 标记为直接购买订单

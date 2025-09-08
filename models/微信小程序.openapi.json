@@ -35,6 +35,9 @@
     },
     {
       "name": "Auth"
+    },
+    {
+      "name": "Admin"
     }
   ],
   "paths": {
@@ -2684,6 +2687,100 @@
         ]
       }
     },
+    "/api/users/{user_id}/transfer-bills/{transfer_bill_no}": {
+      "get": {
+        "summary": "查询微信转账单详情",
+        "deprecated": false,
+        "description": "根据微信转账单号查询转账单详细信息。普通用户只能查询自己的转账单，管理员可以查询所有转账单。查询成功后会自动更新对应的提现记录状态。API仅支持查询最近30天内的转账单。",
+        "operationId": "get_users_user_id_transfer_bills_transfer_bill_no",
+        "tags": [
+          "Payment"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID（openID）",
+            "required": true,
+            "example": "oMYE42l80oelYMDE34nYD456Xoy",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "transfer_bill_no",
+            "in": "path",
+            "description": "微信转账单号",
+            "required": true,
+            "example": "1330000071100999991182020050700019480001",
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询转账单成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "查询转账单成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TransferBillEntity"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "无权限查询此转账单",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "转账单不存在或用户不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "查询转账单失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/wechat/pay/notify": {
       "post": {
         "summary": "微信支付回调通知",
@@ -4153,6 +4250,835 @@
           }
         ]
       }
+    },
+    "/api/admin/users": {
+      "get": {
+        "summary": "获取所有用户列表（管理员）",
+        "deprecated": false,
+        "description": "管理员获取系统中所有用户的列表，支持分页和筛选",
+        "operationId": "get_admin_users",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "页码",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "每页数量",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "agent_level",
+            "in": "query",
+            "description": "代理等级筛选",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "enum": [0, 1, 2]
+            }
+          },
+          {
+            "name": "school",
+            "in": "query",
+            "description": "学校筛选",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取用户列表成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "无管理员权限",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/users/{user_id}": {
+      "get": {
+        "summary": "获取用户详细信息（管理员）",
+        "deprecated": false,
+        "description": "管理员获取指定用户的详细信息",
+        "operationId": "get_admin_user_detail",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID（openID）",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取用户详情成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "用户不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/users/{user_id}/admin": {
+      "put": {
+        "summary": "设置/取消用户管理员权限",
+        "deprecated": false,
+        "description": "管理员设置或取消指定用户的管理员权限",
+        "operationId": "put_admin_user_admin_status",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID（openID）",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "is_admin"
+                ],
+                "properties": {
+                  "is_admin": {
+                    "type": "boolean",
+                    "description": "是否设为管理员"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "管理员权限更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/users/{user_id}/orders": {
+      "get": {
+        "summary": "获取用户订单列表（管理员）",
+        "deprecated": false,
+        "description": "管理员获取指定用户的订单列表",
+        "operationId": "get_admin_user_orders",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "用户ID（openID）",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "页码",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "每页数量",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取用户订单成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/agents/{user_id}/schools": {
+      "put": {
+        "summary": "设置校代理管理的学校",
+        "deprecated": false,
+        "description": "管理员设置校代理管理的学校列表",
+        "operationId": "put_admin_agent_schools",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "代理用户ID（openID）",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "schools"
+                ],
+                "properties": {
+                  "schools": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "学校列表"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "学校设置成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/agents/{user_id}/regions": {
+      "put": {
+        "summary": "设置区代理管理的区域",
+        "deprecated": false,
+        "description": "管理员设置区代理管理的区域列表",
+        "operationId": "put_admin_agent_regions",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "代理用户ID（openID）",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "regions"
+                ],
+                "properties": {
+                  "regions": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "区域列表"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "区域设置成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/agents/{user_id}/stats": {
+      "get": {
+        "summary": "获取代理统计信息（管理员）",
+        "deprecated": false,
+        "description": "管理员获取代理的下属用户和销售统计信息",
+        "operationId": "get_admin_agent_stats",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "代理用户ID（openID）",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取代理统计成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentStatsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/products": {
+      "post": {
+        "summary": "创建商品（管理员）",
+        "deprecated": false,
+        "description": "管理员创建新商品",
+        "operationId": "post_admin_products",
+        "tags": [
+          "Admin"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "商品创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/products/{product_id}": {
+      "put": {
+        "summary": "更新商品信息（管理员）",
+        "deprecated": false,
+        "description": "管理员更新商品信息",
+        "operationId": "put_admin_product",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "description": "商品ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "商品更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "删除商品（管理员）",
+        "deprecated": false,
+        "description": "管理员删除商品",
+        "operationId": "delete_admin_product",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "description": "商品ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "商品删除成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/products/{product_id}/status": {
+      "put": {
+        "summary": "更新商品上下架状态（管理员）",
+        "deprecated": false,
+        "description": "管理员更新商品的上下架状态",
+        "operationId": "put_admin_product_status",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "description": "商品ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "is_active"
+                ],
+                "properties": {
+                  "is_active": {
+                    "type": "boolean",
+                    "description": "是否上架"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "商品状态更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/dashboard/stats": {
+      "get": {
+        "summary": "获取仪表盘统计数据",
+        "deprecated": false,
+        "description": "获取仪表盘核心统计数据，包括用户数、订单数、收入等",
+        "operationId": "get_admin_dashboard_stats",
+        "tags": [
+          "Admin"
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardStatsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/dashboard/recent-orders": {
+      "get": {
+        "summary": "获取最近订单列表",
+        "deprecated": false,
+        "description": "获取最近的订单列表，用于仪表盘展示",
+        "operationId": "get_admin_dashboard_recent_orders",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "返回订单数量，默认10",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecentOrdersResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/dashboard/sales-trend": {
+      "get": {
+        "summary": "获取销售趋势数据",
+        "deprecated": false,
+        "description": "获取指定天数的销售趋势数据",
+        "operationId": "get_admin_dashboard_sales_trend",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "description": "天数，默认30天",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 30
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesTrendResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/dashboard/user-growth": {
+      "get": {
+        "summary": "获取用户增长趋势数据",
+        "deprecated": false,
+        "description": "获取用户注册增长趋势",
+        "operationId": "get_admin_dashboard_user_growth",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "description": "天数，默认30天",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 30
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserGrowthResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/orders": {
+      "get": {
+        "summary": "管理员获取所有订单列表",
+        "deprecated": false,
+        "description": "管理员获取所有订单（不限用户）",
+        "operationId": "get_admin_orders",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "页码",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "每页数量",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "订单状态筛选",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "description": "筛选特定用户",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "description": "开始日期",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "description": "结束日期",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrderListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -4308,6 +5234,21 @@
             "type": "string",
             "format": "date-time",
             "description": "更新时间"
+          },
+          "belongs_to_region": {
+            "type": "string",
+            "description": "校代理归属的区域（仅校代理有值）"
+          },
+          "accumulated_sales": {
+            "type": "number",
+            "format": "double",
+            "description": "累计销售额（用于代理分级提成计算）",
+            "example": 25000.50
+          },
+          "has_used_referral_discount": {
+            "type": "boolean",
+            "description": "是否已使用过推荐优惠（新用户首次购买标识）",
+            "example": false
           }
         }
       },
@@ -5214,6 +6155,37 @@
                   "failed"
                 ],
                 "description": "提取状态"
+              },
+              "openID": {
+                "type": "string",
+                "description": "用户OpenID"
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "创建时间"
+              },
+              "out_bill_no": {
+                "type": "string",
+                "description": "微信转账商户单号"
+              },
+              "transfer_bill_no": {
+                "type": "string",
+                "description": "微信转账单号"
+              },
+              "transfer_state": {
+                "type": "string",
+                "description": "微信转账状态",
+                "enum": [
+                  "WAIT_USER_CONFIRM",
+                  "TRANSFERING",
+                  "PROCESSING",
+                  "ACCEPTED",
+                  "SUCCESS",
+                  "FAIL",
+                  "CANCELLED",
+                  "CANCELING"
+                ]
               }
             }
           }
@@ -5603,6 +6575,81 @@
             "type": "string",
             "format": "date-time",
             "description": "记录更新时间"
+          }
+        }
+      },
+      "TransferBillEntity": {
+        "type": "object",
+        "properties": {
+          "mch_id": {
+            "type": "string",
+            "description": "商户号",
+            "example": "1900001109"
+          },
+          "out_bill_no": {
+            "type": "string",
+            "description": "商户单号",
+            "example": "plfk2020042013"
+          },
+          "transfer_bill_no": {
+            "type": "string",
+            "description": "微信转账单号",
+            "example": "1330000071100999991182020050700019480001"
+          },
+          "appid": {
+            "type": "string",
+            "description": "商户AppID",
+            "example": "wxf636efh567hg4356"
+          },
+          "state": {
+            "type": "string",
+            "description": "单据状态",
+            "enum": [
+              "ACCEPTED",
+              "PROCESSING", 
+              "WAIT_USER_CONFIRM",
+              "TRANSFERING",
+              "SUCCESS",
+              "FAIL",
+              "CANCELING",
+              "CANCELLED"
+            ],
+            "example": "SUCCESS"
+          },
+          "transfer_amount": {
+            "type": "integer",
+            "description": "转账金额（分）",
+            "example": 400000
+          },
+          "transfer_remark": {
+            "type": "string",
+            "description": "转账备注",
+            "example": "新会员开通有礼"
+          },
+          "fail_reason": {
+            "type": "string",
+            "description": "失败原因",
+            "example": "PAYEE_ACCOUNT_ABNORMAL"
+          },
+          "openid": {
+            "type": "string",
+            "description": "收款用户OpenID",
+            "example": "o-MYE42l80oelYMDE34nYD456Xoy"
+          },
+          "user_name": {
+            "type": "string",
+            "description": "收款用户姓名（RSA加密后）",
+            "example": "757b340b45ebef5467rter35gf464344v3542sdf4t6re4tb4f54ty45t4yyry45"
+          },
+          "create_time": {
+            "type": "string",
+            "description": "单据创建时间",
+            "example": "2015-05-20T13:29:35.120+08:00"
+          },
+          "update_time": {
+            "type": "string",
+            "description": "最后一次状态变更时间",
+            "example": "2015-05-20T13:29:35.120+08:00"
           }
         }
       },
@@ -6002,6 +7049,425 @@
             "type": "string",
             "format": "date-time",
             "description": "收藏时间"
+          }
+        }
+      },
+      "AdminUserListResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "获取用户列表成功"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "users": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/User"
+                }
+              },
+              "pagination": {
+                "$ref": "#/components/schemas/Pagination"
+              }
+            }
+          }
+        }
+      },
+      "AgentStatsResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "获取代理统计成功"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "agent_info": {
+                "$ref": "#/components/schemas/User"
+              },
+              "total_users": {
+                "type": "integer",
+                "description": "下属用户总数"
+              },
+              "total_sales": {
+                "type": "number",
+                "description": "总销售额"
+              },
+              "monthly_stats": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/MonthlyAgentStats"
+                },
+                "description": "月度统计"
+              },
+              "subordinate_users": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/User"
+                },
+                "description": "下属用户列表"
+              }
+            }
+          }
+        }
+      },
+      "MonthlyAgentStats": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string",
+            "description": "月份（格式：2024-01）"
+          },
+          "sales": {
+            "type": "number",
+            "description": "该月销售额"
+          },
+          "user_count": {
+            "type": "integer",
+            "description": "该月用户数"
+          },
+          "order_count": {
+            "type": "integer",
+            "description": "该月订单数"
+          }
+        }
+      },
+      "CreateProductRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "price",
+          "stock",
+          "product_type"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "商品名称"
+          },
+          "price": {
+            "type": "number",
+            "minimum": 0,
+            "description": "商品价格"
+          },
+          "description": {
+            "type": "string",
+            "description": "商品描述"
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "库存数量"
+          },
+          "product_type": {
+            "type": "string",
+            "enum": [
+              "physical",
+              "digital"
+            ],
+            "description": "商品类型"
+          },
+          "product_version": {
+            "type": "string",
+            "description": "商品版本"
+          },
+          "book_id": {
+            "type": "string",
+            "description": "关联的书籍ID"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "商品图片URL列表"
+          }
+        }
+      },
+      "UpdateProductRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "商品名称"
+          },
+          "price": {
+            "type": "number",
+            "minimum": 0,
+            "description": "商品价格"
+          },
+          "description": {
+            "type": "string",
+            "description": "商品描述"
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "库存数量"
+          },
+          "product_type": {
+            "type": "string",
+            "enum": [
+              "physical",
+              "digital"
+            ],
+            "description": "商品类型"
+          },
+          "product_version": {
+            "type": "string",
+            "description": "商品版本"
+          },
+          "book_id": {
+            "type": "string",
+            "description": "关联的书籍ID"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "商品图片URL列表"
+          }
+        }
+      },
+      "DashboardStatsResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "获取仪表盘统计成功"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DashboardStats"
+          }
+        }
+      },
+      "DashboardStats": {
+        "type": "object",
+        "properties": {
+          "total_users": {
+            "type": "integer",
+            "description": "总用户数"
+          },
+          "total_orders": {
+            "type": "integer",
+            "description": "总订单数"
+          },
+          "total_revenue": {
+            "type": "number",
+            "format": "float",
+            "description": "总收入"
+          },
+          "total_products": {
+            "type": "integer",
+            "description": "商品总数"
+          },
+          "today_orders": {
+            "type": "integer",
+            "description": "今日订单数"
+          },
+          "today_revenue": {
+            "type": "number",
+            "format": "float",
+            "description": "今日收入"
+          },
+          "active_agents": {
+            "type": "integer",
+            "description": "活跃代理数"
+          },
+          "pending_refunds": {
+            "type": "integer",
+            "description": "待处理退款数"
+          }
+        }
+      },
+      "RecentOrdersResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "获取最近订单成功"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "orders": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/RecentOrderInfo"
+                }
+              }
+            }
+          }
+        }
+      },
+      "RecentOrderInfo": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "订单ID"
+          },
+          "user_openid": {
+            "type": "string",
+            "description": "用户OpenID"
+          },
+          "user_name": {
+            "type": "string",
+            "description": "用户名"
+          },
+          "total_amount": {
+            "type": "number",
+            "format": "float",
+            "description": "订单总金额"
+          },
+          "status": {
+            "type": "string",
+            "description": "订单状态"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          }
+        }
+      },
+      "SalesTrendResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "获取销售趋势成功"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "trend": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/SalesTrendData"
+                }
+              }
+            }
+          }
+        }
+      },
+      "SalesTrendData": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "日期 YYYY-MM-DD"
+          },
+          "sales": {
+            "type": "number",
+            "format": "float",
+            "description": "当日销售额"
+          },
+          "order_count": {
+            "type": "integer",
+            "description": "当日订单数"
+          }
+        }
+      },
+      "UserGrowthResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "获取用户增长趋势成功"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "growth": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UserGrowthData"
+                }
+              }
+            }
+          }
+        }
+      },
+      "UserGrowthData": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "日期 YYYY-MM-DD"
+          },
+          "new_users": {
+            "type": "integer",
+            "description": "当日新用户数"
+          },
+          "total_users": {
+            "type": "integer",
+            "description": "累计用户数"
+          }
+        }
+      },
+      "AdminOrderListResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "响应状态码",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "获取订单列表成功"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "orders": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/RecentOrderInfo"
+                }
+              },
+              "pagination": {
+                "$ref": "#/components/schemas/Pagination"
+              }
+            }
           }
         }
       }

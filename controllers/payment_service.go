@@ -224,7 +224,22 @@ func (s *PaymentService) ProcessPaymentSuccess(orderIDHex, transactionID string)
 		}
 	}
 
-	// 6. 处理书籍权限解锁
+	// 6. 标记用户已使用推荐优惠（如果此订单享受了优惠）
+	if order.DiscountAmount > 0 && order.ReferrerOpenID != "" {
+		err = s.markUserUsedReferralDiscount(order.UserOpenID)
+		if err != nil {
+			log.Printf("标记用户已使用推荐优惠失败: %v", err)
+		}
+	}
+
+	// 7. 处理代理分级提成（基于原始销售金额，不包含优惠）
+	agentCommissionService := NewAgentTieredCommissionService()
+	err = agentCommissionService.ProcessAgentCommission(order.UserOpenID, order.SubtotalAmount, order.ID.Hex())
+	if err != nil {
+		log.Printf("处理代理分级提成失败: %v", err)
+	}
+
+	// 8. 处理书籍权限解锁
 	err = orderService.ProcessOrderUnlockBooks(orderID)
 	if err != nil {
 		log.Printf("处理书籍权限解锁失败: %v", err)
@@ -235,6 +250,24 @@ func (s *PaymentService) ProcessPaymentSuccess(orderIDHex, transactionID string)
 
 	log.Printf("订单 %s 支付成功处理完成", orderIDHex)
 	return nil
+}
+
+// markUserUsedReferralDiscount 标记用户已使用推荐优惠
+func (s *PaymentService) markUserUsedReferralDiscount(userOpenID string) error {
+	collection := GetCollection("users")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	filter := bson.M{"openID": userOpenID}
+	update := bson.M{
+		"$set": bson.M{
+			"has_used_referral_discount": true,
+			"updated_at":                 utils.GetCurrentUTCTime(),
+		},
+	}
+
+	_, err := collection.UpdateOne(ctx, filter, update)
+	return err
 }
 
 // GetOrderByID 根据ID获取订单
@@ -465,14 +498,16 @@ func (s *PaymentService) ProcessAgentWithdraw(withdrawalID, userOpenID string, a
 	err = s.updateWithdrawStatus(withdrawalID, status, failureReason)
 	if err != nil {
 		log.Printf("更新提取记录状态失败: %v", err)
-		// 不返回错误，因为转账可能已经成功
+		// 数据库操作失败，返回错误确保数据一致性
+		return fmt.Errorf("更新提取记录状态失败: %w", err)
 	}
 
 	// 7. 保存新版转账信息到数据库
 	err = s.saveNewTransferInfo(withdrawalID, transferResponse)
 	if err != nil {
 		log.Printf("保存转账信息失败: %v", err)
-		// 不返回错误，因为转账可能已经成功
+		// 数据库操作失败，返回错误确保数据一致性
+		return fmt.Errorf("保存转账信息失败: %w", err)
 	}
 
 	log.Printf("代理提取处理完成，提取ID: %s，转账状态: %s", withdrawalID, status)
@@ -487,11 +522,6 @@ func (s *PaymentService) ProcessAgentWithdraw(withdrawalID, userOpenID string, a
 
 // updateWithdrawStatus 更新提取记录状态
 func (s *PaymentService) updateWithdrawStatus(withdrawalID, status, failureReason string) error {
-	objectID, err := primitive.ObjectIDFromHex(withdrawalID)
-	if err != nil {
-		return fmt.Errorf("无效的提取记录ID: %w", err)
-	}
-
 	collection := GetCollection("withdrawals")
 	ctx, cancel := CreateDBContext()
 	defer cancel()
@@ -511,17 +541,12 @@ func (s *PaymentService) updateWithdrawStatus(withdrawalID, status, failureReaso
 		update["$set"].(bson.M)["completed_at"] = utils.GetCurrentUTCTime()
 	}
 
-	_, err = collection.UpdateOne(ctx, bson.M{"_id": objectID}, update)
+	_, err := collection.UpdateOne(ctx, bson.M{"withdraw_id": withdrawalID}, update)
 	return err
 }
 
 // saveNewTransferInfo 保存新版转账信息
 func (s *PaymentService) saveNewTransferInfo(withdrawalID string, transferResponse *models.TransferToUserResponse) error {
-	objectID, err := primitive.ObjectIDFromHex(withdrawalID)
-	if err != nil {
-		return fmt.Errorf("无效的提取记录ID: %w", err)
-	}
-
 	collection := GetCollection("withdrawals")
 	ctx, cancel := CreateDBContext()
 	defer cancel()
@@ -550,7 +575,7 @@ func (s *PaymentService) saveNewTransferInfo(withdrawalID string, transferRespon
 
 	update := bson.M{"$set": updateFields}
 
-	_, err = collection.UpdateOne(ctx, bson.M{"_id": objectID}, update)
+	_, err := collection.UpdateOne(ctx, bson.M{"withdraw_id": withdrawalID}, update)
 	if err != nil {
 		return fmt.Errorf("更新转账信息失败: %w", err)
 	}

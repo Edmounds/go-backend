@@ -56,8 +56,16 @@ func (s *UserService) CreateUser(user *models.User) error {
 	user.CreatedAt = utils.GetCurrentUTCTime()
 	user.UpdatedAt = utils.GetCurrentUTCTime()
 
+	// 设置默认权限
+	if user.IsAdmin == false { // 显式检查，确保默认为false
+		user.IsAdmin = false
+	}
+
 	// 确保数组字段初始化
 	s.initializeUserArrays(user)
+
+	// 初始化新增的业务逻辑字段
+	s.initializeUserBusinessFields(user)
 
 	// 如果设置了密码，进行加密
 	if user.UserPassword != "" {
@@ -137,6 +145,15 @@ func (s *UserService) initializeUserArrays(user *models.User) {
 	if user.Progress.LearnedWords == nil {
 		user.Progress.LearnedWords = []string{}
 	}
+}
+
+// initializeUserBusinessFields 初始化用户的业务逻辑字段
+func (s *UserService) initializeUserBusinessFields(user *models.User) {
+	// 初始化累计销售额为0
+	user.AccumulatedSales = 0.0
+	// 初始化推荐优惠使用状态为false（未使用过）
+	user.HasUsedReferralDiscount = false
+	// BelongsToRegion 默认为空字符串，代理管理员手动设置
 }
 
 // ValidateReferralCodeExists 验证推荐码是否已存在

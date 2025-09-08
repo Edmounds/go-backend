@@ -37,11 +37,19 @@ type User struct {
 	Addresses      []Address          `bson:"addresses" json:"addresses"`
 	Progress       Progress           `bson:"progress" json:"progress"`
 	IsAgent        bool               `bson:"is_agent" json:"is_agent"`
+	IsAdmin        bool               `bson:"is_admin" json:"is_admin"`
 
-	ManagedSchools []string  `bson:"managed_schools" json:"managed_schools"`
-	ManagedRegions []string  `bson:"managed_regions" json:"managed_regions"`
-	CreatedAt      time.Time `bson:"created_at" json:"created_at"`
-	UpdatedAt      time.Time `bson:"updated_at" json:"updated_at"`
+	// 代理管理字段
+	ManagedSchools  []string `bson:"managed_schools" json:"managed_schools"`
+	ManagedRegions  []string `bson:"managed_regions" json:"managed_regions"`
+	BelongsToRegion string   `bson:"belongs_to_region" json:"belongs_to_region"` // 校代理归属的区域
+
+	// 业务逻辑字段
+	AccumulatedSales        float64 `bson:"accumulated_sales" json:"accumulated_sales"`                   // 累计销售额（用于提成计算）
+	HasUsedReferralDiscount bool    `bson:"has_used_referral_discount" json:"has_used_referral_discount"` // 是否已使用过推荐优惠
+
+	CreatedAt time.Time `bson:"created_at" json:"created_at"`
+	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
 }
 
 // Progress 学习进度结构体
@@ -198,22 +206,25 @@ type ReferralUsage struct {
 
 // WithdrawRecord 提现记录结构体
 type WithdrawRecord struct {
-	ID              primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
-	WithdrawID      string             `bson:"withdraw_id" json:"withdraw_id"`
-	UserOpenID      string             `bson:"user_openid" json:"user_openid"` // 使用OpenID而不是MongoDB的_id
-	Amount          float64            `bson:"amount" json:"amount"`
-	WithdrawMethod  string             `bson:"withdraw_method" json:"withdraw_method"`
-	AccountInfo     AccountInfo        `bson:"account_info,omitempty" json:"account_info,omitempty"` // 微信支付企业转账不需要，保留用于兼容
-	Status          string             `bson:"status" json:"status"`                                 // pending, processing, completed, rejected, failed
-	OutBillNo       string             `bson:"out_bill_no,omitempty" json:"out_bill_no,omitempty"`   // 微信转账商户单号
-	CompletedAt     time.Time          `bson:"completed_at,omitempty" json:"completed_at,omitempty"`
-	RejectionReason string             `bson:"rejection_reason,omitempty" json:"rejection_reason,omitempty"`
-	FailureReason   string             `bson:"failure_reason,omitempty" json:"failure_reason,omitempty"`   // 微信转账失败原因
-	WechatBatchID   string             `bson:"wechat_batch_id,omitempty" json:"wechat_batch_id,omitempty"` // 微信转账批次ID
-	OutBatchNo      string             `bson:"out_batch_no,omitempty" json:"out_batch_no,omitempty"`       // 商户批次号
-	OutDetailNo     string             `bson:"out_detail_no,omitempty" json:"out_detail_no,omitempty"`     // 商户明细号
-	CreatedAt       time.Time          `bson:"created_at" json:"created_at"`
-	UpdatedAt       time.Time          `bson:"updated_at" json:"updated_at"`
+	ID                 primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
+	WithdrawID         string             `bson:"withdraw_id" json:"withdraw_id"`
+	UserOpenID         string             `bson:"user_openid" json:"user_openid"` // 使用OpenID而不是MongoDB的_id
+	Amount             float64            `bson:"amount" json:"amount"`
+	WithdrawMethod     string             `bson:"withdraw_method" json:"withdraw_method"`
+	AccountInfo        AccountInfo        `bson:"account_info,omitempty" json:"account_info,omitempty"` // 微信支付企业转账不需要，保留用于兼容
+	Status             string             `bson:"status" json:"status"`                                 // pending, processing, completed, rejected, failed
+	OutBillNo          string             `bson:"out_bill_no,omitempty" json:"out_bill_no,omitempty"`   // 微信转账商户单号
+	CompletedAt        time.Time          `bson:"completed_at,omitempty" json:"completed_at,omitempty"`
+	RejectionReason    string             `bson:"rejection_reason,omitempty" json:"rejection_reason,omitempty"`
+	FailureReason      string             `bson:"failure_reason,omitempty" json:"failure_reason,omitempty"`             // 微信转账失败原因
+	WechatBatchID      string             `bson:"wechat_batch_id,omitempty" json:"wechat_batch_id,omitempty"`           // 微信转账批次ID
+	OutBatchNo         string             `bson:"out_batch_no,omitempty" json:"out_batch_no,omitempty"`                 // 商户批次号
+	OutDetailNo        string             `bson:"out_detail_no,omitempty" json:"out_detail_no,omitempty"`               // 商户明细号
+	TransferBillNo     string             `bson:"transfer_bill_no,omitempty" json:"transfer_bill_no,omitempty"`         // 微信转账单号
+	TransferState      string             `bson:"transfer_state,omitempty" json:"transfer_state,omitempty"`             // 微信转账状态
+	TransferCreateTime string             `bson:"transfer_create_time,omitempty" json:"transfer_create_time,omitempty"` // 转账创建时间
+	CreatedAt          time.Time          `bson:"created_at" json:"created_at"`
+	UpdatedAt          time.Time          `bson:"updated_at" json:"updated_at"`
 }
 
 // AccountInfo 账户信息结构体
@@ -557,4 +568,226 @@ type TransferToUserResponse struct {
 // UpdateAgentLevelRequest 更新代理等级请求
 type UpdateAgentLevelRequest struct {
 	AgentLevel int `json:"agent_level" binding:"required"`
+}
+
+// ===== 微信转账单查询相关结构体 =====
+
+// GetTransferBillByNoRequest 根据微信转账单号查询转账单请求
+type GetTransferBillByNoRequest struct {
+	TransferBillNo string `json:"transfer_bill_no,omitempty" uri:"transfer_bill_no" binding:"required"`
+}
+
+// TransferBillEntity 微信转账单详情实体（与微信API响应一致）
+type TransferBillEntity struct {
+	MchId          string              `json:"mch_id,omitempty"`           // 商户号
+	OutBillNo      string              `json:"out_bill_no,omitempty"`      // 商户单号
+	TransferBillNo string              `json:"transfer_bill_no,omitempty"` // 微信转账单号
+	Appid          string              `json:"appid,omitempty"`            // 商户AppID
+	State          *TransferBillStatus `json:"state,omitempty"`            // 单据状态
+	TransferAmount int64               `json:"transfer_amount,omitempty"`  // 转账金额（分）
+	TransferRemark string              `json:"transfer_remark,omitempty"`  // 转账备注
+	FailReason     string              `json:"fail_reason,omitempty"`      // 失败原因
+	Openid         string              `json:"openid,omitempty"`           // 收款用户OpenID
+	UserName       string              `json:"user_name,omitempty"`        // 收款用户姓名
+	CreateTime     string              `json:"create_time,omitempty"`      // 单据创建时间
+	UpdateTime     string              `json:"update_time,omitempty"`      // 最后一次状态变更时间
+}
+
+// ===== 管理员API相关结构体 =====
+
+// 用户管理相关
+type AdminUserListRequest struct {
+	Page    int    `form:"page,default=1"`
+	Limit   int    `form:"limit,default=20"`
+	School  string `form:"school"`
+	IsAgent *bool  `form:"is_agent"`
+	IsAdmin *bool  `form:"is_admin"`
+	Keyword string `form:"keyword"` // 搜索关键词（用户名、手机号等）
+}
+
+type UpdateUserAdminRequest struct {
+	IsAdmin bool `json:"is_admin" binding:"required"`
+}
+
+type AdminUserListResponse struct {
+	Users      []User     `json:"users"`
+	Pagination Pagination `json:"pagination"`
+}
+
+// 分页相关结构体
+type Pagination struct {
+	Page       int `json:"page"`        // 当前页码
+	Limit      int `json:"limit"`       // 每页数量
+	Total      int `json:"total"`       // 总记录数
+	TotalPages int `json:"total_pages"` // 总页数
+}
+
+// 代理管理相关
+type UpdateAgentSchoolsRequest struct {
+	Schools []string `json:"schools" binding:"required"`
+}
+
+type UpdateAgentRegionsRequest struct {
+	Regions []string `json:"regions" binding:"required"`
+}
+
+type AgentStatsResponse struct {
+	AgentInfo        User                `json:"agent_info"`
+	TotalUsers       int                 `json:"total_users"`
+	TotalSales       float64             `json:"total_sales"`
+	MonthlyStats     []MonthlyAgentStats `json:"monthly_stats"`
+	SubordinateUsers []User              `json:"subordinate_users"`
+}
+
+type MonthlyAgentStats struct {
+	Month      string  `json:"month"`
+	Sales      float64 `json:"sales"`
+	UserCount  int     `json:"user_count"`
+	OrderCount int     `json:"order_count"`
+}
+
+// 商品管理相关
+type CreateProductRequest struct {
+	Name           string   `json:"name" binding:"required"`
+	Price          float64  `json:"price" binding:"required"`
+	Description    string   `json:"description"`
+	Stock          int      `json:"stock" binding:"required"`
+	ProductType    string   `json:"product_type" binding:"required"` // "physical" 或 "digital"
+	ProductVersion string   `json:"product_version"`
+	BookID         string   `json:"book_id"`
+	Images         []string `json:"images"`
+}
+
+type UpdateProductRequest struct {
+	Name           *string   `json:"name"`
+	Price          *float64  `json:"price"`
+	Description    *string   `json:"description"`
+	Stock          *int      `json:"stock"`
+	ProductType    *string   `json:"product_type"`
+	ProductVersion *string   `json:"product_version"`
+	BookID         *string   `json:"book_id"`
+	Images         *[]string `json:"images"`
+}
+
+type UpdateProductStatusRequest struct {
+	Status string `json:"status" binding:"required"` // "active" 或 "inactive"
+}
+
+// 订单管理相关
+type AdminOrderListRequest struct {
+	Page     int    `form:"page,default=1"`
+	Limit    int    `form:"limit,default=20"`
+	Status   string `form:"status"`
+	UserID   string `form:"user_id"`
+	Keyword  string `form:"keyword"` // 搜索关键词（订单号、商品名等）
+	DateFrom string `form:"date_from"`
+	DateTo   string `form:"date_to"`
+}
+
+type UpdateOrderStatusRequest struct {
+	Status string `json:"status" binding:"required"`
+	Reason string `json:"reason"`
+}
+
+type AdminRefundListRequest struct {
+	Page     int    `form:"page,default=1"`
+	Limit    int    `form:"limit,default=20"`
+	Status   string `form:"status"`
+	UserID   string `form:"user_id"`
+	DateFrom string `form:"date_from"`
+	DateTo   string `form:"date_to"`
+}
+
+type UpdateRefundStatusRequest struct {
+	Status string `json:"status" binding:"required"` // "approved" 或 "rejected"
+	Reason string `json:"reason"`
+}
+
+// 书籍管理相关
+type CreateBookRequest struct {
+	BookName        string `json:"book_name" binding:"required"`
+	BookVersion     string `json:"book_version" binding:"required"`
+	Description     string `json:"description"`
+	Level           string `json:"level" binding:"required"` // "beginner", "intermediate", "advanced"
+	Author          string `json:"author"`
+	Publisher       string `json:"publisher"`
+	CoverImage      string `json:"cover_image"`
+	PublicationDate string `json:"publication_date"`
+}
+
+type UpdateBookRequest struct {
+	BookName        *string `json:"book_name"`
+	BookVersion     *string `json:"book_version"`
+	Description     *string `json:"description"`
+	Level           *string `json:"level"`
+	Author          *string `json:"author"`
+	Publisher       *string `json:"publisher"`
+	CoverImage      *string `json:"cover_image"`
+	PublicationDate *string `json:"publication_date"`
+}
+
+type CreateUnitRequest struct {
+	UnitName string `json:"unit_name" binding:"required"`
+}
+
+type UpdateUnitRequest struct {
+	UnitName *string `json:"unit_name"`
+}
+
+type CreateWordRequest struct {
+	WordName         string `json:"word_name" binding:"required"`
+	WordMeaning      string `json:"word_meaning" binding:"required"`
+	PronunciationURL string `json:"pronunciation_url"`
+	ImgURL           string `json:"img_url"`
+}
+
+type UpdateWordRequest struct {
+	WordName         *string `json:"word_name"`
+	WordMeaning      *string `json:"word_meaning"`
+	PronunciationURL *string `json:"pronunciation_url"`
+	ImgURL           *string `json:"img_url"`
+}
+
+// ===== 仪表盘相关结构体 =====
+
+// DashboardStats 仪表盘统计数据结构体
+type DashboardStats struct {
+	TotalUsers     int     `json:"total_users"`     // 总用户数
+	TotalOrders    int     `json:"total_orders"`    // 总订单数
+	TotalRevenue   float64 `json:"total_revenue"`   // 总收入
+	TotalProducts  int     `json:"total_products"`  // 商品总数
+	TodayOrders    int     `json:"today_orders"`    // 今日订单数
+	TodayRevenue   float64 `json:"today_revenue"`   // 今日收入
+	ActiveAgents   int     `json:"active_agents"`   // 活跃代理数
+	PendingRefunds int     `json:"pending_refunds"` // 待处理退款数
+}
+
+// RecentOrderInfo 最近订单信息结构体
+type RecentOrderInfo struct {
+	ID          primitive.ObjectID `json:"_id"`
+	UserOpenID  string             `json:"user_openid"`
+	UserName    string             `json:"user_name"` // 关联的用户名
+	TotalAmount float64            `json:"total_amount"`
+	Status      string             `json:"status"`
+	CreatedAt   time.Time          `json:"created_at"`
+}
+
+// SalesTrendData 销售趋势数据结构体
+type SalesTrendData struct {
+	Date       string  `json:"date"`        // 日期 YYYY-MM-DD
+	Sales      float64 `json:"sales"`       // 当日销售额
+	OrderCount int     `json:"order_count"` // 当日订单数
+}
+
+// UserGrowthData 用户增长数据结构体
+type UserGrowthData struct {
+	Date       string `json:"date"`        // 日期 YYYY-MM-DD
+	NewUsers   int    `json:"new_users"`   // 当日新用户数
+	TotalUsers int    `json:"total_users"` // 累计用户数
+}
+
+// AdminOrderListResponse 管理员订单列表响应结构体
+type AdminOrderListResponse struct {
+	Orders     []RecentOrderInfo `json:"orders"`
+	Pagination Pagination        `json:"pagination"`
 }

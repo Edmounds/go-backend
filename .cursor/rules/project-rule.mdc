@@ -2,6 +2,9 @@
 alwaysApply: true
 ---
 
+# 使用 Context7 获取 MongoDB 和 Node.js 相关文档
+# 使用mcp 获取api文档
+
 - **错误处理统一**：所有控制器仅使用 `controllers/common.go` 提供的统一响应封装；异常交由 `middlewares/error_handler.go` 的错误处理中间件处理；禁止手写零散 JSON 响应。
 - **模型来源唯一**：所有数据结构体一律从 `models/common.go` 引用，禁止在控制器/服务中自建或重复定义结构体（写代码先在 `models/common.go` 查找/复用）。
 - **用户标识唯一**：前端传参名 `user_id` 视为用户的 openid 使用[[memory:6131446]]；用户相关的数据库层唯一标识为 openid，外键字段统一为 `user_openid`，禁止在业务与查询中过滤或依赖 MongoDB `_id`[[memory:6131439]]，与用户无关的查询可以使用id。

@@ -51,3 +51,33 @@ func FormatTimeForResponse(t time.Time) string {
 	}
 	return t.In(AppTimeZone).Format(time.RFC3339)
 }
+
+// GetTodayStartUTC 获取今日开始时间（UTC）
+func GetTodayStartUTC() time.Time {
+	now := time.Now().UTC()
+	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+}
+
+// GetTodayEndUTC 获取今日结束时间（UTC）
+func GetTodayEndUTC() time.Time {
+	now := time.Now().UTC()
+	return time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999999999, time.UTC)
+}
+
+// GetCurrentMonthStartUTC 获取当前月开始时间（UTC）
+func GetCurrentMonthStartUTC() time.Time {
+	now := time.Now().UTC()
+	return time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+}
+
+// GetCurrentMonthEndUTC 获取当前月结束时间（UTC）
+func GetCurrentMonthEndUTC() time.Time {
+	now := time.Now().UTC()
+	nextMonth := now.AddDate(0, 1, 0)
+	return time.Date(nextMonth.Year(), nextMonth.Month(), 1, 0, 0, 0, 0, time.UTC)
+}
+
+// ParseDateString 解析日期字符串（YYYY-MM-DD格式）
+func ParseDateString(dateStr string) (time.Time, error) {
+	return time.Parse("2006-01-02", dateStr)
+}

@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"fmt"
+	"log"
 	"miniprogram/models"
 	"miniprogram/utils"
 	"time"
@@ -300,8 +302,11 @@ func (s *ReferralRewardService) UpdateUserReferredBy(openID string, referralCode
 	return err
 }
 
-// ProcessReferralReward 处理推荐奖励
+// ProcessReferralReward 处理推荐奖励 - 仅新用户首次购买时给推荐人4元固定返现
 func (s *ReferralRewardService) ProcessReferralReward(referredUserOpenID string, orderID string, orderAmount float64) error {
+	// 固定返现金额4元
+	const FIXED_REFERRAL_COMMISSION = 4.0
+
 	// 1. 获取被推荐用户信息
 	referredUser, err := GetUserByOpenID(referredUserOpenID)
 	if err != nil {
@@ -313,30 +318,259 @@ func (s *ReferralRewardService) ProcessReferralReward(referredUserOpenID string,
 		return nil
 	}
 
-	// 2. 获取推荐人信息
+	// 2. 检查用户是否已经使用过推荐优惠
+	// 只有新用户首次购买才给推荐人返现
+	if referredUser.HasUsedReferralDiscount {
+		return nil // 用户已经享受过推荐优惠，推荐人也已经获得过返现
+	}
+
+	// 3. 检查是否为用户首次订单
+	isFirstOrder, err := s.isUserFirstCompletedOrder(referredUserOpenID, orderID)
+	if err != nil {
+		return err
+	}
+
+	if !isFirstOrder {
+		return nil // 不是首次订单，不给推荐人返现
+	}
+
+	// 4. 获取推荐人信息
 	referrer, err := s.referralCodeService.GetUserByReferralCode(referredUser.ReferredBy)
 	if err != nil {
 		return err
 	}
 
-	// 3. 计算佣金
-	commissionRate := CalculateCommissionRate(referrer.AgentLevel)
-	commissionAmount := orderAmount * commissionRate
-
-	// 4. 创建佣金记录（包含完整推荐链条信息）
-	description := "推荐用户消费获得佣金"
-	err = s.commissionService.CreateCommissionRecord(referrer.OpenID, commissionAmount, "referral", description, orderID, referredUser.OpenID, referredUser.UserName)
+	// 5. 创建固定金额的佣金记录
+	description := "推荐新用户首次购买获得返现"
+	err = s.commissionService.CreateCommissionRecord(referrer.OpenID, FIXED_REFERRAL_COMMISSION, "referral", description, orderID, referredUser.OpenID, referredUser.UserName)
 	if err != nil {
 		return err
 	}
 
-	// 注意：推荐使用记录和佣金系统已分离，used_by只记录注册关系，佣金单独在commissions集合中管理
-
 	return nil
+}
+
+// isUserFirstCompletedOrder 检查这是否是用户首次完成的订单
+func (s *ReferralRewardService) isUserFirstCompletedOrder(userOpenID string, currentOrderID string) (bool, error) {
+	collection := GetCollection("orders")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	// 查找该用户所有已完成的订单，排除当前订单
+	count, err := collection.CountDocuments(ctx, bson.M{
+		"user_openid": userOpenID,
+		"status":      "completed",
+		"_id":         bson.M{"$ne": currentOrderID}, // 排除当前订单
+	})
+	if err != nil {
+		return false, err
+	}
+
+	return count == 0, nil
 }
 
 // 注意：UpdateReferralUsageStatus 函数已删除
 // 因为推荐使用记录和佣金系统已分离，used_by只记录注册关系，不再需要更新状态和佣金
+
+// AgentTieredCommissionService 代理分级提成服务
+type AgentTieredCommissionService struct {
+	commissionService *CommissionService
+}
+
+// NewAgentTieredCommissionService 创建代理分级提成服务实例
+func NewAgentTieredCommissionService() *AgentTieredCommissionService {
+	return &AgentTieredCommissionService{
+		commissionService: NewCommissionService(),
+	}
+}
+
+// ProcessAgentCommission 处理代理分级提成
+func (s *AgentTieredCommissionService) ProcessAgentCommission(userOpenID string, orderAmount float64, orderID string) error {
+	// 获取用户信息
+	user, err := GetUserByOpenID(userOpenID)
+	if err != nil {
+		return err
+	}
+
+	// 如果用户没有学校信息，无法匹配校代理
+	if user.School == "" {
+		return nil
+	}
+
+	// 1. 处理校代理提成
+	err = s.processSchoolAgentCommission(user, orderAmount, orderID)
+	if err != nil {
+		log.Printf("处理校代理提成失败: %v", err)
+	}
+
+	// 2. 处理区代理提成
+	err = s.processRegionalAgentCommission(user, orderAmount, orderID)
+	if err != nil {
+		log.Printf("处理区代理提成失败: %v", err)
+	}
+
+	return nil
+}
+
+// processSchoolAgentCommission 处理校代理提成
+func (s *AgentTieredCommissionService) processSchoolAgentCommission(user *models.User, orderAmount float64, orderID string) error {
+	// 查找该学校的校代理
+	schoolAgent, err := s.findSchoolAgent(user.School)
+	if err != nil || schoolAgent == nil {
+		return nil // 没有找到校代理，直接返回
+	}
+
+	// 更新校代理的累计销售额
+	newAccumulatedSales := schoolAgent.AccumulatedSales + orderAmount
+	err = s.updateAgentAccumulatedSales(schoolAgent.OpenID, newAccumulatedSales)
+	if err != nil {
+		return err
+	}
+
+	// 计算校代理分级提成
+	commissionRate := s.calculateSchoolAgentCommissionRate(newAccumulatedSales)
+	commissionAmount := orderAmount * commissionRate
+
+	// 创建校代理提成记录
+	description := fmt.Sprintf("校代理分级提成 - %s学校用户消费", user.School)
+	return s.commissionService.CreateCommissionRecord(
+		schoolAgent.OpenID,
+		commissionAmount,
+		"agent",
+		description,
+		orderID,
+		user.OpenID,
+		user.UserName,
+	)
+}
+
+// processRegionalAgentCommission 处理区代理提成
+func (s *AgentTieredCommissionService) processRegionalAgentCommission(user *models.User, orderAmount float64, orderID string) error {
+	// 查找该区域的区代理
+	regionalAgent, err := s.findRegionalAgent(user.City)
+	if err != nil || regionalAgent == nil {
+		return nil // 没有找到区代理，直接返回
+	}
+
+	// 更新区代理的累计销售额
+	newAccumulatedSales := regionalAgent.AccumulatedSales + orderAmount
+	err = s.updateAgentAccumulatedSales(regionalAgent.OpenID, newAccumulatedSales)
+	if err != nil {
+		return err
+	}
+
+	// 计算区代理分级提成
+	commissionRate := s.calculateRegionalAgentCommissionRate(newAccumulatedSales)
+	commissionAmount := orderAmount * commissionRate
+
+	// 创建区代理提成记录
+	description := fmt.Sprintf("区代理分级提成 - %s地区用户消费", user.City)
+	return s.commissionService.CreateCommissionRecord(
+		regionalAgent.OpenID,
+		commissionAmount,
+		"agent",
+		description,
+		orderID,
+		user.OpenID,
+		user.UserName,
+	)
+}
+
+// findSchoolAgent 查找学校的校代理
+func (s *AgentTieredCommissionService) findSchoolAgent(school string) (*models.User, error) {
+	collection := GetCollection("users")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	var agent models.User
+	err := collection.FindOne(ctx, bson.M{
+		"is_agent":    true,
+		"agent_level": 1, // 校代理
+		"school":      school,
+	}).Decode(&agent)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil // 没有找到校代理
+		}
+		return nil, err
+	}
+
+	return &agent, nil
+}
+
+// findRegionalAgent 查找区域的区代理
+func (s *AgentTieredCommissionService) findRegionalAgent(city string) (*models.User, error) {
+	collection := GetCollection("users")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	var agent models.User
+	err := collection.FindOne(ctx, bson.M{
+		"is_agent":        true,
+		"agent_level":     2, // 区代理
+		"managed_regions": bson.M{"$in": []string{city}},
+	}).Decode(&agent)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil // 没有找到区代理
+		}
+		return nil, err
+	}
+
+	return &agent, nil
+}
+
+// updateAgentAccumulatedSales 更新代理的累计销售额
+func (s *AgentTieredCommissionService) updateAgentAccumulatedSales(agentOpenID string, newAccumulatedSales float64) error {
+	collection := GetCollection("users")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	filter := bson.M{"openID": agentOpenID}
+	update := bson.M{
+		"$set": bson.M{
+			"accumulated_sales": newAccumulatedSales,
+			"updated_at":        utils.GetCurrentUTCTime(),
+		},
+	}
+
+	_, err := collection.UpdateOne(ctx, filter, update)
+	return err
+}
+
+// calculateSchoolAgentCommissionRate 计算校代理分级提成率
+func (s *AgentTieredCommissionService) calculateSchoolAgentCommissionRate(accumulatedSales float64) float64 {
+	switch {
+	case accumulatedSales >= 100000: // 10万元及以上
+		return 0.10
+	case accumulatedSales >= 80000: // 8-10万元
+		return 0.09
+	case accumulatedSales >= 60000: // 6-8万元
+		return 0.08
+	case accumulatedSales >= 40000: // 4-6万元
+		return 0.07
+	case accumulatedSales >= 20000: // 2-4万元
+		return 0.06
+	default: // 0-2万元
+		return 0.05
+	}
+}
+
+// calculateRegionalAgentCommissionRate 计算区代理分级提成率
+func (s *AgentTieredCommissionService) calculateRegionalAgentCommissionRate(accumulatedSales float64) float64 {
+	switch {
+	case accumulatedSales >= 16000000: // 1600万元及以上
+		return 0.15
+	case accumulatedSales >= 12000000: // 1200-1600万元
+		return 0.13
+	case accumulatedSales >= 8000000: // 800-1200万元
+		return 0.12
+	case accumulatedSales >= 4000000: // 400-800万元
+		return 0.11
+	default: // 0-400万元
+		return 0.10
+	}
+}
 
 // WechatQRCodeService 微信小程序码服务
 type WechatQRCodeService struct{}

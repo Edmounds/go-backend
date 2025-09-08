@@ -68,8 +68,37 @@ func SetupRoutes(r *gin.Engine) {
 			protected.DELETE("/users/:user_id/collected-cards/:word_id", controllers.RemoveFromCollectedCardsHandler())
 			protected.GET("/users/:user_id/collected-cards/:word_id/status", controllers.CheckCardCollectedHandler())
 
-			// 管理员路由
-			protected.PUT("/admin/users/:user_id/agent-level", controllers.UpdateAgentLevelHandler())
+			// 管理员路由组 - 需要管理员权限
+			admin := protected.Group("/admin")
+			admin.Use(middlewares.AdminAuthMiddleware())
+			{
+				// 仪表盘API
+				admin.GET("/dashboard/stats", controllers.GetDashboardStatsHandler())
+				admin.GET("/dashboard/recent-orders", controllers.GetDashboardRecentOrdersHandler())
+				admin.GET("/dashboard/sales-trend", controllers.GetSalesTrendHandler())
+				admin.GET("/dashboard/user-growth", controllers.GetUserGrowthHandler())
+
+				// 用户管理
+				admin.GET("/users", controllers.GetAllUsersHandler())
+				admin.GET("/users/:user_id", controllers.GetUserDetailHandler())
+				admin.PUT("/users/:user_id/admin", controllers.UpdateUserAdminStatusHandler())
+				admin.GET("/users/:user_id/orders", controllers.GetUserOrdersHandler())
+
+				// 订单管理
+				admin.GET("/orders", controllers.GetAllOrdersHandler())
+
+				// 代理管理
+				admin.PUT("/users/:user_id/agent-level", controllers.UpdateAgentLevelHandler())
+				admin.PUT("/agents/:user_id/schools", controllers.UpdateAgentSchoolsHandler())
+				admin.PUT("/agents/:user_id/regions", controllers.UpdateAgentRegionsHandler())
+				admin.GET("/agents/:user_id/stats", controllers.GetAgentStatsHandler())
+
+				// 商品管理
+				admin.POST("/products", controllers.CreateProductHandler())
+				admin.PUT("/products/:product_id", controllers.UpdateProductHandler())
+				admin.DELETE("/products/:product_id", controllers.DeleteProductHandler())
+				admin.PUT("/products/:product_id/status", controllers.UpdateProductStatusHandler())
+			}
 
 			// 学习进度相关路由
 			protected.GET("/users/:user_id/progress", controllers.GetProgressHandler())
@@ -119,6 +148,9 @@ func SetupRoutes(r *gin.Engine) {
 			protected.POST("/users/:user_id/refunds", controllers.CreateRefundHandler())
 			protected.GET("/users/:user_id/refunds", controllers.GetRefundRecordsHandler())
 			protected.GET("/users/:user_id/refunds/:refund_id", controllers.GetRefundHandler())
+
+			// 微信转账单查询路由
+			protected.GET("/users/:user_id/transfer-bills/:transfer_bill_no", controllers.GetTransferBillByNoHandler())
 
 			// 受保护的搜索路由（需要用户身份）
 			protected.GET("/search/orders", controllers.SearchOrdersHandler())

@@ -126,10 +126,15 @@ func (s *AuthService) createNewUserWithReferral(openID string, referralCode stri
 		Progress: models.Progress{
 			LearnedWords: []string{},
 		},
+		IsAdmin:        false, // 默认非管理员
 		ManagedSchools: []string{},
 		ManagedRegions: []string{},
-		CreatedAt:      utils.GetCurrentUTCTime(),
-		UpdatedAt:      utils.GetCurrentUTCTime(),
+		// 新增业务逻辑字段
+		AccumulatedSales:        0.0,   // 累计销售额初始化为0
+		HasUsedReferralDiscount: false, // 推荐优惠使用状态初始化为false
+		BelongsToRegion:         "",    // 归属区域初始化为空
+		CreatedAt:               utils.GetCurrentUTCTime(),
+		UpdatedAt:               utils.GetCurrentUTCTime(),
 	}
 
 	// 处理推荐码

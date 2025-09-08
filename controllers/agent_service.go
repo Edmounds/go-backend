@@ -414,6 +414,24 @@ func (s *AgentWithdrawService) GetWithdrawRecords(openID string) ([]models.Withd
 	return records, nil
 }
 
+// GetWithdrawRecordByID 根据withdraw_id获取单个提取记录
+func (s *AgentWithdrawService) GetWithdrawRecordByID(withdrawID string) (*models.WithdrawRecord, error) {
+	collection := GetCollection("withdrawals")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	var record models.WithdrawRecord
+	err := collection.FindOne(ctx, bson.M{"withdraw_id": withdrawID}).Decode(&record)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, fmt.Errorf("提取记录不存在")
+		}
+		return nil, err
+	}
+
+	return &record, nil
+}
+
 // GetAvailableCommission 获取可提取佣金余额
 func (s *AgentWithdrawService) GetAvailableCommission(openID string) (float64, error) {
 	// 获取所有已完成的佣金

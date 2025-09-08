@@ -176,3 +176,46 @@ func (s *WechatTransferService) BuildTransferRequest(userOpenID string, amount f
 
 	return request
 }
+
+// GetTransferBillByNo 根据微信转账单号查询转账单详情
+func (s *WechatTransferService) GetTransferBillByNo(transferBillNo string) (*models.TransferBillEntity, error) {
+	// 使用SDK客户端发送GET请求
+	ctx := context.Background()
+
+	// 构建查询API的完整URL
+	cfg := s.config
+	apiURL := fmt.Sprintf("%s/v3/fund-app/mch-transfer/transfer-bills/transfer-bill-no/%s",
+		cfg.WechatMchAPIURL, transferBillNo)
+
+	log.Printf("[微信转账查询] 查询转账单: %s", transferBillNo)
+
+	// 发送GET请求
+	result, err := s.client.Get(ctx, apiURL)
+	if err != nil {
+		log.Printf("[微信转账查询] 请求失败: %v", err)
+		return nil, fmt.Errorf("查询转账单失败: %w", err)
+	}
+
+	// 检查响应状态
+	if result.Response.StatusCode != 200 {
+		log.Printf("[微信转账查询] API返回错误: 状态码=%d", result.Response.StatusCode)
+		return nil, fmt.Errorf("微信转账查询API返回错误: 状态码=%d", result.Response.StatusCode)
+	}
+
+	// 解析响应体
+	body, err := io.ReadAll(result.Response.Body)
+	if err != nil {
+		log.Printf("[微信转账查询] 读取响应体失败: %v", err)
+		return nil, fmt.Errorf("读取响应体失败: %w", err)
+	}
+	defer result.Response.Body.Close()
+
+	var transferBill models.TransferBillEntity
+	if err := json.Unmarshal(body, &transferBill); err != nil {
+		log.Printf("[微信转账查询] 解析响应失败: %v", err)
+		return nil, fmt.Errorf("解析转账单详情失败: %w", err)
+	}
+
+	log.Printf("[微信转账查询] 查询成功 - 转账单号: %s, 状态: %v", transferBillNo, transferBill.State)
+	return &transferBill, nil
+}

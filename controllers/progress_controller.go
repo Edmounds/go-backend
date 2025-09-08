@@ -19,6 +19,7 @@ func GetProgressHandler() gin.HandlerFunc {
 		openID := c.Param("user_id")
 
 		// 初始化用户服务
+
 		userService := GetUserService()
 
 		// 根据openID查询用户信息

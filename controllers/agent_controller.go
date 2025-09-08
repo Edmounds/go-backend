@@ -295,12 +295,26 @@ func WithdrawCommissionHandler() gin.HandlerFunc {
 			return
 		}
 
-		SuccessResponse(c, "提取申请提交成功", gin.H{
-			"withdraw_id": withdrawRecord.WithdrawID,
-			"openID":      openID,
-			"amount":      withdrawRecord.Amount,
-			"status":      withdrawRecord.Status,
-			"created_at":  withdrawRecord.CreatedAt.Format(time.RFC3339),
-		})
+		// 6. 重新查询完整的提取记录（包含转账信息）
+		updatedRecord, err := withdrawService.GetWithdrawRecordByID(withdrawRecord.WithdrawID)
+		if err != nil {
+			log.Printf("查询完整提取记录失败: %v", err)
+			InternalServerErrorResponse(c, "查询提取记录失败", err)
+			return
+		}
+
+		// 7. 返回包含完整转账信息的响应
+		responseData := gin.H{
+			"withdraw_id":      updatedRecord.WithdrawID,
+			"openID":           openID,
+			"amount":           updatedRecord.Amount,
+			"status":           updatedRecord.Status,
+			"created_at":       updatedRecord.CreatedAt.Format(time.RFC3339),
+			"out_bill_no":      updatedRecord.OutBillNo,
+			"transfer_bill_no": updatedRecord.TransferBillNo,
+			"transfer_state":   updatedRecord.TransferState,
+		}
+
+		SuccessResponse(c, "提取申请提交成功", responseData)
 	}
 }

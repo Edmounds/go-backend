@@ -1,15 +1,20 @@
 package controllers
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"miniprogram/models"
+	"miniprogram/utils"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/wechatpay-apiv3/wechatpay-go/core"
 	"github.com/wechatpay-apiv3/wechatpay-go/core/notify"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // WechatPayClient 微信支付客户端单例
@@ -258,4 +263,204 @@ func GetRefundHandler() gin.HandlerFunc {
 		log.Printf("[退款控制器] 退款详情获取成功 - 退款单号: %s", refundID)
 		SuccessResponse(c, "获取退款详情成功", record)
 	}
+}
+
+// ===== 微信转账单查询相关处理器 =====
+
+// GetTransferBillByNoHandler 根据微信转账单号查询转账单详情处理器
+func GetTransferBillByNoHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userOpenID := c.Param("user_id")
+		transferBillNo := c.Param("transfer_bill_no")
+
+		log.Printf("[转账单查询] 用户 %s 查询转账单: %s", userOpenID, transferBillNo)
+
+		// 获取当前用户信息
+		userService := GetUserService()
+		currentUser, err := userService.FindUserByOpenID(userOpenID)
+		if err != nil {
+			log.Printf("[转账单查询] 获取用户信息失败: %v", err)
+			NotFoundResponse(c, "用户不存在", err)
+			return
+		}
+
+		// 初始化微信转账服务
+		transferService, err := NewWechatTransferService()
+		if err != nil {
+			log.Printf("[转账单查询] 初始化转账服务失败: %v", err)
+			InternalServerErrorResponse(c, "初始化转账服务失败", err)
+			return
+		}
+
+		// 调用微信API查询转账单详情
+		transferBill, err := transferService.GetTransferBillByNo(transferBillNo)
+		if err != nil {
+			log.Printf("[转账单查询] 查询转账单失败: %v", err)
+			InternalServerErrorResponse(c, "查询转账单失败", err)
+			return
+		}
+
+		// 权限验证：普通用户只能查询自己的转账单，管理员可以查询所有
+		if !currentUser.IsAdmin {
+			// 普通用户权限验证：检查转账单的收款人是否是当前用户
+			if transferBill.Openid != userOpenID {
+				log.Printf("[转账单查询] 权限不足 - 用户: %s, 转账单收款人: %s", userOpenID, transferBill.Openid)
+				ForbiddenResponse(c, "无权限查询此转账单", nil)
+				return
+			}
+		} else {
+			log.Printf("[转账单查询] 管理员查询 - 用户: %s", userOpenID)
+		}
+
+		// 更新对应的提现记录
+		err = updateWithdrawRecordFromTransferBill(transferBillNo, transferBill)
+		if err != nil {
+			// 更新失败不影响查询结果的返回，只记录日志
+			log.Printf("[转账单查询] 更新提现记录失败: %v", err)
+		}
+
+		log.Printf("[转账单查询] 查询成功 - 转账单号: %s, 状态: %v", transferBillNo, transferBill.State)
+		SuccessResponse(c, "查询转账单成功", transferBill)
+	}
+}
+
+// updateWithdrawRecordFromTransferBill 根据转账单信息更新对应的提现记录
+func updateWithdrawRecordFromTransferBill(transferBillNo string, transferBill *models.TransferBillEntity) error {
+	collection := GetCollection("withdraw_records")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	// 根据微信转账单号查找对应的提现记录
+	filter := map[string]interface{}{
+		"transfer_bill_no": transferBillNo,
+	}
+
+	// 构建更新字段
+	updateFields := map[string]interface{}{
+		"updated_at": time.Now(),
+	}
+
+	// 更新转账状态
+	if transferBill.State != nil {
+		updateFields["transfer_state"] = string(*transferBill.State)
+
+		// 根据微信转账状态更新提现记录状态
+		switch *transferBill.State {
+		case models.TRANSFERBILLSTATUS_SUCCESS:
+			updateFields["status"] = "completed"
+			if transferBill.UpdateTime != "" {
+				updateFields["completed_at"] = transferBill.UpdateTime
+			}
+
+			// 提现成功后，清零代理的累计销售额
+			go func() {
+				err := clearAgentAccumulatedSalesAfterWithdraw(transferBill.OutBillNo)
+				if err != nil {
+					log.Printf("清零代理累计销售额失败: %v", err)
+				}
+			}()
+		case models.TRANSFERBILLSTATUS_FAIL:
+			updateFields["status"] = "failed"
+			if transferBill.FailReason != "" {
+				updateFields["failure_reason"] = transferBill.FailReason
+			}
+		case models.TRANSFERBILLSTATUS_PROCESSING:
+			updateFields["status"] = "processing"
+		case models.TRANSFERBILLSTATUS_WAIT_USER_CONFIRM, models.TRANSFERBILLSTATUS_TRANSFERING:
+			updateFields["status"] = "processing"
+		case models.TRANSFERBILLSTATUS_CANCELLED, models.TRANSFERBILLSTATUS_CANCELING:
+			updateFields["status"] = "cancelled"
+		}
+	}
+
+	// 更新其他字段
+	if transferBill.CreateTime != "" {
+		updateFields["transfer_create_time"] = transferBill.CreateTime
+	}
+	if transferBill.OutBillNo != "" {
+		updateFields["out_bill_no"] = transferBill.OutBillNo
+	}
+	if transferBill.FailReason != "" {
+		updateFields["failure_reason"] = transferBill.FailReason
+	}
+
+	// 执行更新
+	update := map[string]interface{}{
+		"$set": updateFields,
+	}
+
+	result, err := collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return fmt.Errorf("更新提现记录失败: %w", err)
+	}
+
+	if result.MatchedCount == 0 {
+		log.Printf("[转账单查询] 未找到对应的提现记录 - 转账单号: %s", transferBillNo)
+		return fmt.Errorf("未找到对应的提现记录")
+	}
+
+	log.Printf("[转账单查询] 提现记录更新成功 - 转账单号: %s, 更新字段数: %d", transferBillNo, len(updateFields))
+	return nil
+}
+
+// clearAgentAccumulatedSalesAfterWithdraw 提现成功后清零代理累计销售额
+func clearAgentAccumulatedSalesAfterWithdraw(outBillNo string) error {
+	// 1. 根据商户单号查找提现记录
+	withdrawRecord, err := getWithdrawRecordByOutBillNo(outBillNo)
+	if err != nil {
+		return fmt.Errorf("查找提现记录失败: %w", err)
+	}
+
+	if withdrawRecord == nil {
+		return fmt.Errorf("提现记录不存在: %s", outBillNo)
+	}
+
+	// 2. 检查用户是否为代理
+	user, err := GetUserByOpenID(withdrawRecord.UserOpenID)
+	if err != nil {
+		return fmt.Errorf("查找用户失败: %w", err)
+	}
+
+	if !user.IsAgent || user.AgentLevel < 1 {
+		return nil // 不是代理，无需清零
+	}
+
+	// 3. 清零代理的累计销售额
+	collection := GetCollection("users")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	filter := bson.M{"openID": user.OpenID}
+	update := bson.M{
+		"$set": bson.M{
+			"accumulated_sales": 0.0,
+			"updated_at":        utils.GetCurrentUTCTime(),
+		},
+	}
+
+	_, err = collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return fmt.Errorf("清零累计销售额失败: %w", err)
+	}
+
+	log.Printf("代理 %s 提现成功，累计销售额已清零", user.OpenID)
+	return nil
+}
+
+// getWithdrawRecordByOutBillNo 根据商户单号查找提现记录
+func getWithdrawRecordByOutBillNo(outBillNo string) (*models.WithdrawRecord, error) {
+	collection := GetCollection("withdraw_records")
+	ctx, cancel := CreateDBContext()
+	defer cancel()
+
+	var record models.WithdrawRecord
+	err := collection.FindOne(ctx, bson.M{"out_bill_no": outBillNo}).Decode(&record)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &record, nil
 }
